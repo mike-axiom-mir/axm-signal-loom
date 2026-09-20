@@ -1,0 +1,165 @@
+[
+  {
+    "name": "Live Weave is a separate ephemeral presentation",
+    "viewport": "desktop",
+    "covers": [
+      "Frozen Weave continuity",
+      "Live Weave mode switch",
+      "truth labeling",
+      "no silent persistence"
+    ],
+    "steps": [
+      "Open the playground and confirm Frozen Weave is the default",
+      "Switch to Live Weave",
+      "Inspect the LIVE / EPHEMERAL badge and moving visual field",
+      "Switch back to Frozen Weave"
+    ],
+    "expected": "Frozen Weave remains unchanged and replayable; Live Weave is clearly marked ephemeral and does not overwrite the frozen session."
+  },
+  {
+    "name": "Pointer motion bends Flow Field without restart",
+    "viewport": "desktop",
+    "covers": [
+      "browser-local sampling",
+      "rolling target field",
+      "smoothing",
+      "continuous renderer"
+    ],
+    "steps": [
+      "Switch to Live Weave",
+      "Keep Browser Local enabled",
+      "Move the pointer quickly across the visual field",
+      "Stop moving and watch the field settle"
+    ],
+    "expected": "The Flow Field changes continuously with pointer motion and transitions smoothly rather than restarting or jumping to a new page state."
+  },
+  {
+    "name": "Weights alter live influence and motion",
+    "viewport": "desktop",
+    "covers": [
+      "normalized live influence",
+      "source-weight bridge",
+      "source recomputation only on change"
+    ],
+    "steps": [
+      "Load demo signals in Live Weave",
+      "Move the Working Chat weight toward 100",
+      "Move Simulation State toward 0",
+      "Inspect the live influence percentages and visual field"
+    ],
+    "expected": "The percentages renormalize and the animated field visibly changes while the underlying Frozen Weave source controls receive the same weights."
+  },
+  {
+    "name": "Working Chat packet updates while renderer stays live",
+    "viewport": "desktop",
+    "covers": [
+      "working-chat live input",
+      "latest valid source sample",
+      "no renderer restart",
+      "provenance"
+    ],
+    "steps": [
+      "Switch to Live Weave",
+      "Open Inject / replace a live packet",
+      "Choose Working Chat",
+      "Inject a valid JSON packet with provenance",
+      "Inject a different valid packet"
+    ],
+    "expected": "Working Chat remains one weighted source among others; each valid packet changes the live field without restarting the renderer."
+  },
+  {
+    "name": "Empty enabled organs wait in Live Weave",
+    "viewport": "desktop",
+    "covers": [
+      "waiting-source behavior v0.5.1",
+      "live influence panel",
+      "non-blocking missing source"
+    ],
+    "steps": [
+      "Enable a JSON source organ with an empty packet",
+      "Switch to Live Weave",
+      "Inspect its source row"
+    ],
+    "expected": "The source is shown as waiting with zero normalized influence and does not break the moving field."
+  },
+  {
+    "name": "Internet Eye remains target blind in Live Weave",
+    "viewport": "desktop",
+    "covers": [
+      "Internet Eye aggregate reduction",
+      "no raw target exposure",
+      "live target field"
+    ],
+    "steps": [
+      "Supply a Shodan-compatible observation packet containing IP, hostname, org and banner fields",
+      "Enable Internet Eye with provenance",
+      "Switch to Live Weave and inspect the live panel"
+    ],
+    "expected": "The visual field uses only a reduced aggregate. Raw target identifiers are never rendered into the live influence panel or saved by Live Weave."
+  },
+  {
+    "name": "Freeze this moment creates normal frozen session",
+    "viewport": "desktop",
+    "covers": [
+      "explicit freeze bridge",
+      "CaptureRecipe",
+      "CaptureSession",
+      "fingerprints",
+      "replay"
+    ],
+    "steps": [
+      "Run Live Weave with at least two contributing sources",
+      "Press Freeze this moment",
+      "Inspect the Frozen Weave session receipt",
+      "Use Weave frozen session again"
+    ],
+    "expected": "The current source state is captured through the existing normal capture path, a replayable fingerprinted session appears, and re-weaving does not silently recapture live state."
+  },
+  {
+    "name": "Three live render modes share one field",
+    "viewport": "desktop",
+    "covers": [
+      "Flow Field",
+      "Particle Current",
+      "Liquid Mesh",
+      "single live field"
+    ],
+    "steps": [
+      "Switch to Live Weave",
+      "Change render mode from Flow Field to Particle Current to Liquid Mesh",
+      "Adjust the same source weight in each mode"
+    ],
+    "expected": "All three modes respond to the same rolling weighted signal field rather than maintaining incompatible source state."
+  },
+  {
+    "name": "Fullscreen presentation keeps minimal HUD",
+    "viewport": "desktop",
+    "covers": [
+      "fullscreen",
+      "minimal live HUD",
+      "HUD visibility control"
+    ],
+    "steps": [
+      "Switch to Live Weave",
+      "Press Fullscreen",
+      "Inspect source count, mode and LIVE / EPHEMERAL label",
+      "Hide and show the HUD"
+    ],
+    "expected": "The canvas fills the display and the minimal HUD can be hidden without stopping the renderer."
+  },
+  {
+    "name": "Live Weave mobile puts visual first",
+    "viewport": "mobile",
+    "covers": [
+      "mobile responsive layout",
+      "visual-first presentation",
+      "source controls"
+    ],
+    "steps": [
+      "Open Live Weave on a narrow viewport",
+      "Inspect ordering",
+      "Scroll below the visual into influence controls"
+    ],
+    "expected": "The large visual field appears before the source panel, while live controls remain usable below it."
+  }
+]
