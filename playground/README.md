@@ -1,25 +1,73 @@
-# Signal Loom Visual Playground
+# Signal Machine Visual Playground v0.5
 
-Hosted experiment: https://axm-signal-loom-playground-1uwyt4.v2.appdeploy.ai/
+Hosted experiment:
 
-## v0.3 experiment
+https://axm-signal-loom-playground-1uwyt4.v2.appdeploy.ai/
 
-The playground is now **capture-first** rather than prompt-first.
+## What changed
 
-Visible local browser signals feed the Signal Magnet:
+The browser surface now represents the Signal Machine itself instead of a prompt-driven demo.
 
-- pointer position
-- pointer motion
-- scroll position
-- viewport ratio
-- clock phase
+It exposes ten native source organs with:
 
-It also accepts:
+- explicit enable/disable
+- influence weight
+- provenance where required
+- visible input boundary
 
-- arbitrary source material text
-- a generic external JSON signal packet from a working chat, connector, local tool, web research process, simulation, sensor bridge, or anything else able to produce JSON
+The default organs match the Python registry:
 
-The Magnet freezes those sources into a capture fingerprint. The Loom then generates visual drafts from that frozen capture. Intent text is optional and only biases the result.
+- Browser Local
+- Source Material
+- Working Chat
+- Simulation State
+- Internet Eye
+- Connector Packet
+- File Packet
+- Model Output
+- Sensor
+- Custom
+
+## Capture session
+
+**Capture + weave** freezes the enabled source packets and normalizes their weights into a replayable influence receipt.
+
+The frozen session shows:
+
+- session fingerprint
+- recipe fingerprint
+- normalized source percentages
+- per-source packet fingerprints
+- provenance
+- reduced source packets
+
+**Weave frozen session** changes nothing about the sources. It only reinterprets the already-frozen session using the current seed, chaos and optional intent bias.
+
+## Internet Eye
+
+Internet Eye accepts Shodan-compatible JSON and reduces it before the session is exposed.
+
+The frozen session contains aggregate internet influence, not raw IPs, hostnames, organization names or banner text.
+
+There is no live Shodan credential in this public playground.
+
+## Working-chat bridge
+
+A working chat can open the playground and either fill the Working Chat organ directly or use the existing URL bridge:
+
+- `?packet=<URL-encoded JSON>`
+- `?source=<URL-encoded text>`
+- `?intent=...`
+- `?seed=...`
+- `?chaos=...`
+
+Working Chat is just one weighted source. It does not replace the other organs or gain promotion authority.
+
+## Persistence
+
+Nothing is silently saved.
+
+The **Save session locally** button explicitly writes only the currently frozen session to browser local storage. **Load saved session** explicitly restores it.
 
 ## Render modes
 
@@ -31,12 +79,10 @@ The Magnet freezes those sources into a capture fingerprint. The Loom then gener
 - mesh
 - constellation
 
-Click a result to inspect the full captured source packet, capture fingerprint, seed, chaos, visual field and result fingerprint.
-
 ## Boundary
 
-The browser packet format is `axm.signal-loom.browser/0.3`.
+Browser packet/session format: `axm.signal-machine.session/0.5` and `axm.signal-loom.browser/0.5`.
 
-The browser and Python v0.3 core share the source-first architecture but are not yet bit-identical across runtimes. The playground also does not silently fetch URLs or private data: outside systems must explicitly provide source material or a signal packet.
+The browser and Python machines share the v0.5 architecture but are not yet bit-identical across runtimes.
 
 **Sources feed the Magnet. The Loom proposes. The consuming project decides.**
