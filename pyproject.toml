@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "Source-first, replayable creativity signals for any consuming project."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "PolyForm-Noncommercial-1.0.0" }
+license = { text = "MPL-2.0" }
 authors = [{ name = "Mike - Axiom/Mir" }]
 dependencies = []
 
