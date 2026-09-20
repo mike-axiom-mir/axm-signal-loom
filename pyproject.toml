@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "axm-signal-loom"
-version = "0.1.0"
-description = "Replayable, bounded creativity signals for any consuming project."
+version = "0.3.0"
+description = "Source-first, replayable creativity signals for any consuming project."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "PolyForm-Noncommercial-1.0.0" }
