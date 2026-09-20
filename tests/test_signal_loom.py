@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from signal_loom import ShodanInfluenceAdapter, SignalLoom, SignalMagnet, SourcePacket, weave
+from signal_loom import (\n    CaptureRecipe,\n    ShodanInfluenceAdapter,\n    SignalLoom,\n    SignalMachine,\n    SignalMagnet,\n    SourceInput,\n    SourcePacket,\n    weave,\n)
 from signal_loom.render import svg_preview
 
 
