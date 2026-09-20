@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+      - name: Smoke CLI
+        env:
+          PYTHONPATH: src
+        run: python -m signal_loom --prompt "storm ceramic insect jazz" --seed 4837291 --count 3 --chaos 0.72 --out /tmp/loom-smoke
