@@ -1,84 +1,91 @@
 [
   {
-    "name": "Enable every organ without filling every input",
+    "name": "Run Live Weave and freeze a replayable moment",
     "sanity": true,
     "viewport": "desktop",
     "covers": [
-      "non-blocking empty source organs",
-      "waiting source state",
-      "weighted capture recipe",
-      "visual proposal generation"
+      "Live Weave mode switch",
+      "demo source loading",
+      "rolling weighted live field",
+      "live source weight control",
+      "Freeze this moment bridge",
+      "normal Frozen Weave CaptureSession"
     ],
-    "description": "Verifies enabling all source organs does not turn empty optional sources into capture errors.",
+    "description": "Verifies the primary Live Weave workflow stays ephemeral until an explicit freeze creates the normal replayable session.",
     "steps": [
-      "Enable every source organ without filling the optional empty JSON/provenance fields",
-      "Press \"Capture + weave\"",
-      "Inspect the frozen Influence receipt and proposal grid"
+      "Switch from Frozen Weave to Live Weave",
+      "Press \"Load demo signals\" and move the pointer across the large visual field",
+      "Increase Working Chat influence and press \"Freeze this moment\""
     ],
-    "expected": "Capture succeeds using the source organs that actually have usable signals; empty enabled organs remain marked as waiting and do not appear in the frozen influence receipt."
+    "expected": "The app returns to Frozen Weave with a visible fingerprinted Influence receipt created from the current source state; Live Weave was labeled LIVE / EPHEMERAL before the explicit freeze."
   },
   {
-    "name": "Load sample signals across the whole machine",
+    "name": "Inject a Working Chat signal without restarting Live Weave",
     "viewport": "desktop",
     "covers": [
-      "sample signal fixtures",
-      "all source-organ usability",
-      "influence receipt"
+      "working-chat live input",
+      "latest valid signal replacement",
+      "provenance",
+      "continuous live presentation",
+      "live influence panel"
     ],
-    "description": "Verifies the whole source registry can be explored immediately without requiring external accounts or data.",
+    "description": "Verifies a new structured Working Chat packet alters the shared live source state while the presentation remains in Live Weave.",
     "steps": [
-      "Press \"Load sample signals\"",
-      "Press \"Capture + weave\"",
-      "Inspect the Influence receipt"
+      "Switch to Live Weave and open \"Inject / replace a live packet\"",
+      "Choose Working Chat, enter a valid JSON packet and provenance",
+      "Press \"Inject packet\" and inspect the Working Chat row and live notice"
     ],
-    "expected": "All ten source organs have usable demo fixtures, capture succeeds, and the receipt visibly includes all ten weighted influences while identifying the samples as demo fixtures rather than live sources."
+    "expected": "Working Chat is shown as a ready contributing source with normalized influence, the notice confirms the update happened without restarting Live Weave, and the page remains labeled LIVE / EPHEMERAL."
   },
   {
-    "name": "Internet Eye reduces observations before exposure",
-    "viewport": "desktop",
-    "covers": [
-      "native Internet Eye organ",
-      "target-blind reduction",
-      "provenance preservation"
-    ],
-    "description": "Verifies raw Shodan-compatible observations are reduced before the frozen session is exposed.",
-    "steps": [
-      "Enable Internet Eye",
-      "Enter {\"matches\":[{\"ip_str\":\"203.0.113.55\",\"hostnames\":[\"hidden.invalid\"],\"port\":443,\"transport\":\"tcp\",\"location\":{\"country_code\":\"NL\"},\"product\":\"nginx\",\"org\":\"Example Org\",\"data\":\"private banner\",\"ssl\":{\"enabled\":true}}]} in its JSON input",
-      "Enter \"QA indexed fixture\" as provenance and press \"Capture + weave\", then open \"Inspect frozen source packets\""
-    ],
-    "expected": "Internet Eye is present as target-blind aggregate influence, while the raw IP, hostname, organization name, and banner text are not visible in the frozen session JSON."
-  },
-  {
-    "name": "Entered external data still requires provenance",
+    "name": "External packet still fails closed without provenance",
     "viewport": "desktop",
     "covers": [
       "provenance guardrail",
       "failed capture preservation",
+      "waiting-source continuity",
       "no silent rewrite"
     ],
-    "description": "Verifies waiting empty sources are harmless but an external packet that is actually supplied must carry provenance.",
+    "description": "Verifies the v0.5.1 waiting behavior remains harmless while an actually supplied external packet still requires provenance.",
     "steps": [
-      "Enable Connector Packet",
-      "Enter {\"signal\":0.5} in its JSON input but leave provenance empty",
-      "Press \"Capture + weave\""
+      "In Frozen Weave enable Connector Packet and enter {\"signal\":0.5} while leaving provenance empty",
+      "Press \"Capture + weave\"",
+      "Inspect the visible capture error and existing frozen state"
     ],
-    "expected": "A visible error says Connector Packet requires provenance and no new session receipt replaces the prior frozen session."
+    "expected": "A visible error says Connector Packet requires provenance and no invalid new frozen session replaces prior state."
   },
   {
-    "name": "Explicitly save and reload a frozen session on mobile",
+    "name": "Internet Eye remains target-blind through live-to-frozen capture",
+    "viewport": "desktop",
+    "covers": [
+      "native Internet Eye organ",
+      "target-blind aggregate reduction",
+      "Live Weave Internet Eye influence",
+      "frozen source packet privacy"
+    ],
+    "description": "Verifies Internet Eye can influence Live Weave without exposing raw indexed targets when the moment is frozen.",
+    "steps": [
+      "In Frozen Weave enable Internet Eye, enter a Shodan-compatible observation containing an IP, hostname, organization and banner, and add provenance",
+      "Switch to Live Weave, then press \"Freeze this moment\"",
+      "Open \"Inspect frozen source packets\""
+    ],
+    "expected": "Internet Eye contributes as an aggregate influence, while the raw IP, hostname, organization name and banner text are absent from the frozen session JSON."
+  },
+  {
+    "name": "Mobile keeps the live visual first and frozen persistence explicit",
     "viewport": "mobile",
     "covers": [
-      "explicit local session save",
-      "session reload",
-      "mobile machine controls"
+      "mobile Live Weave visual-first layout",
+      "mobile source controls",
+      "explicit local frozen-session save",
+      "session reload"
     ],
-    "description": "Verifies persistence occurs only after the user explicitly requests it.",
+    "description": "Verifies mobile presents the large live visual before its source controls and retains the existing explicit Frozen Weave persistence workflow.",
     "steps": [
-      "Press \"Capture + weave\"",
-      "Press \"Save session locally\"",
+      "Switch to Live Weave and confirm the large visual field appears before the source influence controls",
+      "Press \"Freeze this moment\", then \"Save session locally\"",
       "Press \"Load saved session\""
     ],
-    "expected": "The frozen session remains visible with the same session fingerprint and influence receipt after explicit reload."
+    "expected": "The mobile Live Weave layout is visual-first, and the resulting frozen session reloads only after the explicit save/load actions with the same visible session fingerprint."
   }
 ]
