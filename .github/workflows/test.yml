@@ -20,3 +20,13 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m signal_loom --prompt "storm ceramic insect jazz" --seed 4837291 --count 3 --chaos 0.72 --out /tmp/loom-smoke
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install visual playground dependencies
+        working-directory: playground
+        run: npm install
+      - name: Build visual playground
+        working-directory: playground
+        run: npm run build

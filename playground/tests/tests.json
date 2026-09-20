@@ -1,0 +1,59 @@
+[
+  {
+    "name": "Weave visible deterministic drafts",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "prompt-driven draft generation",
+      "seeded visual output",
+      "multiple artistic render modes"
+    ],
+    "description": "Verifies the core visual experiment produces a grid of inspectable artistic drafts from a prompt, seed, and chaos value.",
+    "steps": [
+      "Keep the default prompt \"storm ceramic insect jazz\" and seed 4837291",
+      "Set Chaos to 72% and Drafts to 12",
+      "Press \"Weave signals\""
+    ],
+    "expected": "Twelve visual draft cards are visible, each with a rendered canvas, draft number, render mode, and fingerprint."
+  },
+  {
+    "name": "Replay the same recipe",
+    "viewport": "desktop",
+    "covers": ["deterministic replay", "fingerprint continuity"],
+    "description": "Verifies repeating the same recipe preserves the visible draft identities rather than silently rerolling them.",
+    "steps": [
+      "Use prompt \"glass insect cathedral\", seed 4837291, chaos 72%, and six drafts",
+      "Press \"Weave signals\" and note the fingerprint shown on draft #01",
+      "Press \"Weave signals\" again without changing any control"
+    ],
+    "expected": "Draft #01 keeps the same fingerprint and visual composition after the second weave."
+  },
+  {
+    "name": "Inspect and capture a draft on mobile",
+    "viewport": "mobile",
+    "covers": ["draft inspection", "recipe visibility", "mobile layout"],
+    "description": "Verifies a user can select an interesting accident and see the replay recipe on a narrow screen.",
+    "steps": [
+      "Press a visual draft card",
+      "Scroll to the Captured Signal inspector",
+      "Read the visible JSON recipe"
+    ],
+    "expected": "The inspector shows the selected draft number, render mode, seed, chaos, fingerprint, and JSON field data without hiding the result controls."
+  },
+  {
+    "name": "Change chaos and reroll",
+    "viewport": "desktop",
+    "covers": [
+      "bounded chaos control",
+      "new-seed exploration",
+      "visible run metadata"
+    ],
+    "description": "Verifies exploration controls visibly change the run while preserving the ability to identify the active seed.",
+    "steps": [
+      "Move the Chaos slider to 20%",
+      "Press \"New seed\"",
+      "Observe the seed field, run metadata, and visual grid"
+    ],
+    "expected": "A new numeric seed is shown, the run metadata uses that seed, and the visual draft grid is regenerated."
+  }
+]
