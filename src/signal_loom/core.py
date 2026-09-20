@@ -236,6 +236,7 @@ def weave_capture(
         field=field,
         operations=operations,
         fingerprint=_fingerprint(pre_fingerprint),
+        source_capture=capture,
     )
 
 
