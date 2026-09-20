@@ -33,7 +33,7 @@ def svg_preview(
             f'fill="none" stroke="currentColor" stroke-opacity="{opacity:.3f}" />'
         )
 
-    title = escape(packet.request)
+    title = escape(packet.request or "captured sources")
     short_fp = packet.fingerprint[:12]
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Signal Loom draft {packet.draft}">
   <rect width="100%" height="100%" fill="#0b0d12" />

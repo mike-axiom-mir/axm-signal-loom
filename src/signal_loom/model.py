@@ -30,6 +30,7 @@ class CreativityPacket:
     field: Signal
     operations: tuple[str, ...]
     fingerprint: str
+    source_capture: SourceCapture | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -42,5 +43,38 @@ class CreativityPacket:
             "signals": [signal.as_dict() for signal in self.signals],
             "field": self.field.as_dict(),
             "operations": list(self.operations),
+            "fingerprint": self.fingerprint,
+            "source_capture": None if self.source_capture is None else self.source_capture.as_dict(),
+        }
+
+
+@dataclass(frozen=True)
+class SourcePacket:
+    source: str
+    label: str
+    payload: Any
+    provenance: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "label": self.label,
+            "payload": self.payload,
+            "provenance": self.provenance,
+        }
+
+
+@dataclass(frozen=True)
+class SourceCapture:
+    version: str
+    packets: tuple[SourcePacket, ...]
+    field: Signal
+    fingerprint: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "packets": [packet.as_dict() for packet in self.packets],
+            "field": self.field.as_dict(),
             "fingerprint": self.fingerprint,
         }

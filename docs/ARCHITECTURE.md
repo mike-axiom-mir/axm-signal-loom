@@ -1,40 +1,80 @@
-# Signal Loom Architecture v0.1
+# Signal Loom Architecture v0.3
 
-Signal Loom is deliberately separate from Universal Creation, MorphTile, games, world builders, and other consumers. It is a source of bounded proposals, not a project authority.
+Signal Loom is deliberately separate from Universal Creation, MorphTile, games, world builders, and other consumers. It generates bounded proposals; it does not own the systems that consume them.
 
-## Flow
+## Correct flow
 
-1. A caller supplies a request, seed, draft index, signal width, and chaos value.
-2. The loom derives deterministic concept, noise, and oscillator signals.
-3. Bounded transforms mix, cross-map, and mutate those signals.
-4. The loom emits a portable creativity packet with a stable fingerprint.
-5. A cheap SVG preview may be produced for inspection.
-6. The consuming project decides whether to reject, refine, vault, render, or promote the proposal.
+```text
+INTERNET / LOCAL / CONNECTORS / FILES / SENSORS / MODELS / SIMULATIONS
+                              |
+                         source adapters
+                              |
+                         SIGNAL MAGNET
+                    capture + provenance + freeze
+                              |
+                     replayable source field
+                              |
+                         SIGNAL LOOM
+             mix + cross-map + mutate + oscillate
+                              |
+                     temporary visual/data drafts
+                              |
+                       consuming project
+                    reject / refine / promote
+```
+
+A prompt is **not** the source. Text intent may optionally bias interpretation after capture.
+
+## Source adapter contract
+
+The Python core exposes `SourcePacket` with:
+
+- `source`: source class such as `web`, `local`, `connector`, `sensor`, `model`, `simulation`, `custom`
+- `label`: human-readable description
+- `payload`: JSON-serializable source material
+- `provenance`: optional source/provenance note
+
+Signal Magnet never grants itself access to a system. The caller obtains data through an authorized channel and hands the resulting packet to the Magnet.
+
+## Capture
+
+A capture:
+
+1. receives one or more explicit source packets;
+2. normalizes them into one bounded numeric field;
+3. fingerprints the packet set and field;
+4. freezes the result for replay;
+5. passes that frozen source field to the Loom.
+
+Live signals are useful only if the capture is preserved. Otherwise "live randomness" becomes unrecoverable noise.
+
+## Loom
+
+The Loom may add:
+
+- optional intent bias
+- seeded RNG
+- oscillators / rhythm
+- bounded mutation
+- cross-mapping
+- project-selected interpretation layers
+
+Intent is deliberately weaker than the captured field.
 
 ## Root rules
 
-- **Replayable surprise:** randomness must be seeded and recoverable.
-- **Proposal, not authority:** Signal Loom never silently mutates a consuming project.
-- **Bounded chaos:** public APIs constrain chaos and signal values.
-- **Portable output:** JSON packets are the integration boundary.
-- **Cheap exploration first:** preview hundreds of ideas before spending expensive render or model compute.
-- **No fake intelligence:** v0.1 uses deterministic procedural signals; it does not claim to capture neural activations.
-- **Future adapters, not coupling:** audio, image, embeddings, model activations, physics, UI gestures, and project state should enter through adapters rather than becoming core dependencies.
+- **Truth:** distinguish real source capture from procedural generation and never claim unavailable internal model signals.
+- **Agency / non-domination:** source access is explicit; Loom output is a proposal; consuming projects decide whether anything survives.
+- **Continuity:** source packets, captures, seeds, operations and fingerprints support replay and diagnosis.
+- **Wisdom before speed:** cheap exploratory fields come before expensive downstream creation.
+- **Provenance:** adapters should retain where a signal came from.
+- **Bounded chaos:** public APIs constrain signal fields and mutation.
+- **No hidden collection:** a runtime should expose what it captures.
 
-## Packet identity
+## Current boundaries
 
-A packet fingerprint covers the recipe inputs, source signals, operations, and final field. Repeating the same recipe produces the same packet and fingerprint.
+The browser playground captures visible browser-local signals and accepts source material / external JSON packets. It does not autonomously browse the internet or open private connections.
 
-## Intended future adapters
+A working chat, connector, local process, sensor bridge or future adapter can gather information through its own authorized capability and submit a source packet.
 
-- audio rhythm / spectrum
-- image edges / palette / masks
-- geometry / transforms
-- animation curves
-- physics fields
-- embeddings
-- local-model activation probes where technically and legally appropriate
-- game and world state
-- human gestures / controller input
-
-Adapters should normalize into bounded numeric signal arrays and preserve source/provenance metadata.
+The Python and browser runtimes are deterministic inside themselves but are not yet cross-runtime bit-identical.

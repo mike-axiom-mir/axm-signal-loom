@@ -1,59 +1,68 @@
 [
   {
-    "name": "Weave visible deterministic drafts",
+    "name": "Capture sources and weave visual drafts",
     "sanity": true,
     "viewport": "desktop",
     "covers": [
-      "prompt-driven draft generation",
-      "seeded visual output",
-      "multiple artistic render modes"
+      "signal magnet capture",
+      "local live signals",
+      "source material adapter",
+      "visual draft generation"
     ],
-    "description": "Verifies the core visual experiment produces a grid of inspectable artistic drafts from a prompt, seed, and chaos value.",
+    "description": "Verifies the primary workflow captures visible source inputs first and then creates visual drafts from the frozen capture.",
     "steps": [
-      "Keep the default prompt \"storm ceramic insect jazz\" and seed 4837291",
-      "Set Chaos to 72% and Drafts to 12",
-      "Press \"Weave signals\""
+      "Enter \"wind 8 m/s, wet pavement, midnight train\" in Source material",
+      "Leave Intent bias empty",
+      "Press \"Capture + weave\""
     ],
-    "expected": "Twelve visual draft cards are visible, each with a rendered canvas, draft number, render mode, and fingerprint."
+    "expected": "A frozen capture fingerprint is shown and twelve visual draft cards appear while the Intent bias field remains optional."
   },
   {
-    "name": "Replay the same recipe",
-    "viewport": "desktop",
-    "covers": ["deterministic replay", "fingerprint continuity"],
-    "description": "Verifies repeating the same recipe preserves the visible draft identities rather than silently rerolling them.",
-    "steps": [
-      "Use prompt \"glass insect cathedral\", seed 4837291, chaos 72%, and six drafts",
-      "Press \"Weave signals\" and note the fingerprint shown on draft #01",
-      "Press \"Weave signals\" again without changing any control"
-    ],
-    "expected": "Draft #01 keeps the same fingerprint and visual composition after the second weave."
-  },
-  {
-    "name": "Inspect and capture a draft on mobile",
-    "viewport": "mobile",
-    "covers": ["draft inspection", "recipe visibility", "mobile layout"],
-    "description": "Verifies a user can select an interesting accident and see the replay recipe on a narrow screen.",
-    "steps": [
-      "Press a visual draft card",
-      "Scroll to the Captured Signal inspector",
-      "Read the visible JSON recipe"
-    ],
-    "expected": "The inspector shows the selected draft number, render mode, seed, chaos, fingerprint, and JSON field data without hiding the result controls."
-  },
-  {
-    "name": "Change chaos and reroll",
+    "name": "Replay one frozen capture",
     "viewport": "desktop",
     "covers": [
-      "bounded chaos control",
-      "new-seed exploration",
-      "visible run metadata"
+      "capture continuity",
+      "deterministic replay",
+      "result fingerprints"
     ],
-    "description": "Verifies exploration controls visibly change the run while preserving the ability to identify the active seed.",
+    "description": "Verifies weaving the same frozen capture with unchanged controls does not silently recapture live signals.",
     "steps": [
-      "Move the Chaos slider to 20%",
-      "Press \"New seed\"",
-      "Observe the seed field, run metadata, and visual grid"
+      "Press \"Capture + weave\" once and note draft #01 fingerprint",
+      "Do not change the seed, chaos, intent, or source fields",
+      "Press \"Weave captured\""
     ],
-    "expected": "A new numeric seed is shown, the run metadata uses that seed, and the visual draft grid is regenerated."
+    "expected": "The frozen capture fingerprint remains unchanged and draft #01 keeps the same result fingerprint."
+  },
+  {
+    "name": "Reject malformed external packet",
+    "viewport": "desktop",
+    "covers": [
+      "external packet adapter",
+      "invalid JSON guardrail",
+      "no silent capture"
+    ],
+    "description": "Verifies malformed connector or working-chat packets are rejected visibly instead of being silently interpreted.",
+    "steps": [
+      "Enter \"{bad json\" in External signal packet · JSON",
+      "Press \"Capture + weave\"",
+      "Read the visible capture error"
+    ],
+    "expected": "A visible message says the external packet is not valid JSON and no new frozen capture is created."
+  },
+  {
+    "name": "Inspect source provenance on mobile",
+    "viewport": "mobile",
+    "covers": [
+      "draft inspection",
+      "captured source visibility",
+      "mobile layout"
+    ],
+    "description": "Verifies the result packet exposes the source capture rather than pretending the optional intent text was the source.",
+    "steps": [
+      "Press a visual draft card",
+      "Scroll to the Captured Result inspector",
+      "Read the JSON packet"
+    ],
+    "expected": "The packet visibly contains capture.local, sourceMaterial, externalPacket, capture fingerprint, intentBias, seed, chaos, result fingerprint, and field data."
   }
 ]

@@ -1,83 +1,78 @@
 # AXM Signal Loom
 
-**Fast, replayable creative chaos that can feed any project.**
+**Catch signals first. Make art second.**
 
-Signal Loom is a separate AXM machine for generating bounded, deterministic creativity signals. It does not own Universal Creation, MorphTile, a game, a renderer, or any other consumer. A project asks for variation; the Loom proposes possibilities; the project decides what survives.
+Signal Loom is a separate AXM creativity machine. Its proper input is not a prompt: a **Signal Magnet** captures explicit source packets from anywhere a caller can legitimately access — local state, internet research, connectors, simulations, sensors, models, files, games, or custom tools — and freezes them into a replayable source field. The Loom then mutates that field into disposable creative proposals.
 
-> **Root boundary:** the Loom proposes. The consuming project decides.
+> **Root boundary:** sources feed the Magnet. The Loom proposes. The consuming project decides.
 
-## v0.1
+## v0.3 direction
 
-The first implementation is intentionally small and offline:
+- generic `SourcePacket` adapter boundary
+- deterministic `SignalMagnet` capture
+- frozen capture fingerprints
+- source-first weaving
+- optional intent text as a **bias**, not the source
+- seeded noise / oscillators / bounded mutation
+- replayable creativity packets
+- browser visual playground
+- zero Python runtime dependencies
 
-- deterministic concept signals from text
-- seeded noise signals
-- oscillator/rhythm signals
-- weighted mixing
-- cross-mapping
-- bounded mutation
-- reproducible JSON creativity packets
-- stable SHA-256 packet fingerprints
-- cheap SVG inspection previews
-- batch generation for rapid draft exploration
-- zero runtime dependencies
-
-This is not yet neural-signal capture. Neural/model adapters belong later, behind explicit adapters and provenance boundaries.
+The older `weave("text", ...)` API remains for compatibility and simple experiments. New integrations should prefer `SignalMagnet.capture(...)` + `SignalLoom.draft_capture(...)`.
 
 ## Visual playground
 
-Open the live browser experiment:
+Open the live experiment:
 
 https://axm-signal-loom-playground-1uwyt4.v2.appdeploy.ai/
 
-It generates multiple replayable visual drafts from a prompt, seed and chaos value. The browser source is preserved in [playground/](playground/).
+The browser now visibly captures local signals (pointer, motion, scroll, viewport ratio and clock phase), plus optional source material and a generic external JSON packet. It freezes that source state before weaving. Intent text is optional.
 
-The browser v0.2 runtime is deterministic within itself but is not yet bit-identical to the Python v0.1 generator; that boundary is documented rather than hidden.
+The browser v0.3 runtime and Python v0.3 core follow the same architecture but are **not yet bit-identical across runtimes**. That difference remains explicit.
 
-## Try it
-
-Python 3.11+ is enough.
-
-```bash
-PYTHONPATH=src python -m signal_loom \
-  --prompt "storm ceramic insect jazz" \
-  --seed 4837291 \
-  --count 12 \
-  --chaos 0.72 \
-  --out loom-output
-```
-
-The output directory receives one JSON packet and optional SVG preview per draft plus a manifest.
-
-Run the exact command again and every packet fingerprint and field value will replay exactly.
-
-## Integration
+## Python example
 
 ```python
-from signal_loom import SignalLoom
+from signal_loom import SignalLoom, SignalMagnet, SourcePacket
 
-loom = SignalLoom(width=64)
-packet = loom.draft(
-    "unusual vehicle idea",
-    seed=4837291,
-    draft=7,
-    chaos=0.65,
+magnet = SignalMagnet(width=64)
+capture = magnet.capture(
+    SourcePacket(
+        source="web",
+        label="weather snapshot",
+        payload={"wind": 0.8, "rain": 0.2},
+        provenance="public research",
+    ),
+    SourcePacket(
+        source="local",
+        label="game state",
+        payload={"danger": 0.6, "speed": 0.9},
+    ),
 )
 
-# The caller chooses what to do next.
+loom = SignalLoom(width=64)
+packet = loom.draft_capture(
+    capture,
+    seed=4837291,
+    draft=7,
+    chaos=0.72,
+    intent="eerie architecture",  # optional bias only
+)
+
+print(capture.fingerprint)
 print(packet.fingerprint)
 print(packet.field.values)
 ```
 
-The JSON packet is the generic handoff format. Consumers can map its bounded field into geometry, color, motion, procedural parameters, game RNG, music, layout, simulation settings, or other project-specific meanings.
+Any connected system can define a source adapter that emits a JSON-serializable `SourcePacket`. The Magnet does not silently fetch or authorize access by itself; the caller controls what sources are available and records provenance.
 
 ## Why keep it separate?
 
-A shared Loom can service many projects without any one project becoming its architecture. It also keeps experimentation disposable: thousands of temporary combinations can exist without entering a project's permanent state.
+A shared Loom can service games, art, music, world generation, UI, animation, simulations, and other projects without any one consumer becoming its architecture.
 
-Interesting outputs become permanent only when the consumer explicitly promotes them.
+Temporary combinations stay disposable. Interesting results become permanent only when a consuming project explicitly promotes them.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the current boundary and future adapter direction.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the current flow.
 
 ## License
 

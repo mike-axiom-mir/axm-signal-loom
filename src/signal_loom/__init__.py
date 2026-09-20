@@ -1,5 +1,15 @@
-from .core import SignalLoom, weave
-from .model import CreativityPacket, Signal
+from .core import SignalLoom, weave, weave_capture
+from .magnet import SignalMagnet
+from .model import CreativityPacket, Signal, SourceCapture, SourcePacket
 
-__all__ = ["Signal", "CreativityPacket", "SignalLoom", "weave"]
-__version__ = "0.1.0"
+__all__ = [
+    "Signal",
+    "SourcePacket",
+    "SourceCapture",
+    "CreativityPacket",
+    "SignalMagnet",
+    "SignalLoom",
+    "weave",
+    "weave_capture",
+]
+__version__ = "0.3.0"
