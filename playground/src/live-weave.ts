@@ -143,10 +143,12 @@ function initLiveWeave(shell: HTMLElement): void {
   const sessionPanel = shell.querySelector<HTMLElement>('#sessionPanel');
 
   if (!hero || !captureButton || !sessionPanel) return;
+  const frozenCaptureButton = captureButton as HTMLButtonElement;
+  const frozenSessionPanel = sessionPanel as HTMLElement;
 
   const frozenElements: HTMLElement[] = [
     ...Array.from(shell.querySelectorAll<HTMLElement>('.machine-panel')),
-    sessionPanel,
+    frozenSessionPanel,
     ...Array.from(shell.querySelectorAll<HTMLElement>('.results-head')),
     shell.querySelector<HTMLElement>('#grid'),
     shell.querySelector<HTMLElement>('#inspector'),
@@ -269,35 +271,29 @@ function initLiveWeave(shell: HTMLElement): void {
   `;
   modeBar.insertAdjacentElement('afterend', livePanel);
 
-  const canvas = livePanel.querySelector<HTMLCanvasElement>('#liveCanvas');
-  const stage = livePanel.querySelector<HTMLElement>('#liveStage');
-  const influenceList = livePanel.querySelector<HTMLElement>('#liveInfluenceList');
-  const notice = livePanel.querySelector<HTMLElement>('#liveNotice');
-  const playButton = livePanel.querySelector<HTMLButtonElement>('#livePlay');
-  const modeSelect = livePanel.querySelector<HTMLSelectElement>('#liveRenderMode');
-  const smoothingInput = livePanel.querySelector<HTMLInputElement>('#liveSmoothing');
-  const trailInput = livePanel.querySelector<HTMLInputElement>('#liveTrail');
-  const intensityInput = livePanel.querySelector<HTMLInputElement>('#liveIntensity');
-  const chaosInput = livePanel.querySelector<HTMLInputElement>('#liveChaos');
-  const speedInput = livePanel.querySelector<HTMLInputElement>('#liveSpeed');
-  const colorInput = livePanel.querySelector<HTMLInputElement>('#liveColorDrift');
-  const hud = livePanel.querySelector<HTMLElement>('#liveHud');
-  const hudToggle = livePanel.querySelector<HTMLButtonElement>('#liveHudToggle');
-  const hudSources = livePanel.querySelector<HTMLElement>('#liveHudSources');
-  const hudMode = livePanel.querySelector<HTMLElement>('#liveHudMode');
-  const injectSource = livePanel.querySelector<HTMLSelectElement>('#liveInjectSource');
-  const injectPacket = livePanel.querySelector<HTMLTextAreaElement>('#liveInjectPacket');
-  const injectProvenance = livePanel.querySelector<HTMLInputElement>('#liveInjectProvenance');
-
-  if (
-    !canvas || !stage || !influenceList || !notice || !playButton || !modeSelect
-    || !smoothingInput || !trailInput || !intensityInput || !chaosInput
-    || !speedInput || !colorInput || !hud || !hudToggle || !hudSources || !hudMode
-    || !injectSource || !injectPacket || !injectProvenance
-  ) return;
+  const canvas = livePanel.querySelector<HTMLCanvasElement>('#liveCanvas')!;
+  const stage = livePanel.querySelector<HTMLElement>('#liveStage')!;
+  const influenceList = livePanel.querySelector<HTMLElement>('#liveInfluenceList')!;
+  const notice = livePanel.querySelector<HTMLElement>('#liveNotice')!;
+  const playButton = livePanel.querySelector<HTMLButtonElement>('#livePlay')!;
+  const modeSelect = livePanel.querySelector<HTMLSelectElement>('#liveRenderMode')!;
+  const smoothingInput = livePanel.querySelector<HTMLInputElement>('#liveSmoothing')!;
+  const trailInput = livePanel.querySelector<HTMLInputElement>('#liveTrail')!;
+  const intensityInput = livePanel.querySelector<HTMLInputElement>('#liveIntensity')!;
+  const chaosInput = livePanel.querySelector<HTMLInputElement>('#liveChaos')!;
+  const speedInput = livePanel.querySelector<HTMLInputElement>('#liveSpeed')!;
+  const colorInput = livePanel.querySelector<HTMLInputElement>('#liveColorDrift')!;
+  const hud = livePanel.querySelector<HTMLElement>('#liveHud')!;
+  const hudToggle = livePanel.querySelector<HTMLButtonElement>('#liveHudToggle')!;
+  const hudSources = livePanel.querySelector<HTMLElement>('#liveHudSources')!;
+  const hudMode = livePanel.querySelector<HTMLElement>('#liveHudMode')!;
+  const injectSource = livePanel.querySelector<HTMLSelectElement>('#liveInjectSource')!;
+  const injectPacketInput = livePanel.querySelector<HTMLTextAreaElement>('#liveInjectPacket')!;
+  const injectProvenance = livePanel.querySelector<HTMLInputElement>('#liveInjectProvenance')!;
 
   const context = canvas.getContext('2d');
   if (!context) return;
+  const ctx = context;
 
   let currentPresentation: 'frozen' | 'live' = 'frozen';
   let playing = true;
@@ -315,9 +311,7 @@ function initLiveWeave(shell: HTMLElement): void {
   let lastPointerAt = performance.now();
   let targetField = Array.from({ length: FIELD_WIDTH }, () => 0);
   let smoothedField = Array.from({ length: FIELD_WIDTH }, () => 0);
-  let previousField = Array.from({ length: FIELD_WIDTH }, () => 0);
   let sourceSignature = '';
-  let contributingSources: LiveSource[] = [];
   const sourceUpdatedAt = new Map<string, number>();
   const sourcePayloadSignatures = new Map<string, string>();
   const particles: Particle[] = [];
@@ -409,7 +403,6 @@ function initLiveWeave(shell: HTMLElement): void {
 
     if (usable.length === 0 || total <= 0) {
       targetField = Array.from({ length: FIELD_WIDTH }, () => 0);
-      contributingSources = [];
       return;
     }
 
@@ -421,7 +414,6 @@ function initLiveWeave(shell: HTMLElement): void {
       });
       return clamp(combined);
     });
-    contributingSources = usable;
   }
 
   function sampleSources(force = false): void {
@@ -528,9 +520,9 @@ function initLiveWeave(shell: HTMLElement): void {
     canvasHeight = height;
     canvas.width = Math.floor(width * ratio);
     canvas.height = Math.floor(height * ratio);
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.fillStyle = '#05070c';
-    context.fillRect(0, 0, width, height);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.fillStyle = '#05070c';
+    ctx.fillRect(0, 0, width, height);
     particles.length = 0;
   }
 
@@ -548,8 +540,8 @@ function initLiveWeave(shell: HTMLElement): void {
   function fadeBackground(): void {
     const trail = Number(trailInput.value) / 100;
     const alpha = 0.28 - trail * 0.245;
-    context.fillStyle = `rgba(5,7,12,${clamp(alpha, 0.025, 0.3)})`;
-    context.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillStyle = `rgba(5,7,12,${clamp(alpha, 0.025, 0.3)})`;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   }
 
   function drawFlow(): void {
@@ -560,7 +552,7 @@ function initLiveWeave(shell: HTMLElement): void {
 
     for (let lane = 0; lane < 26; lane += 1) {
       const laneRatio = lane / 25;
-      context.beginPath();
+      ctx.beginPath();
       for (let step = 0; step <= 74; step += 1) {
         const x = (step / 74) * canvasWidth;
         const sample = fieldAt(step / 74 + laneRatio * 0.07 + time * 0.011);
@@ -570,12 +562,12 @@ function initLiveWeave(shell: HTMLElement): void {
           + sample * 42 * intensity
           + cross * 18
           + wave * (6 + chaos * 18);
-        if (step === 0) context.moveTo(x, y);
-        else context.lineTo(x, y);
+        if (step === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
-      context.strokeStyle = `hsla(${(hue + lane * 4.7) % 360},88%,${58 + (lane % 5) * 4}%,${0.08 + Math.abs(fieldAt(laneRatio)) * 0.34})`;
-      context.lineWidth = 0.8 + Math.abs(fieldAt(laneRatio + 0.1)) * 2.8;
-      context.stroke();
+      ctx.strokeStyle = `hsla(${(hue + lane * 4.7) % 360},88%,${58 + (lane % 5) * 4}%,${0.08 + Math.abs(fieldAt(laneRatio)) * 0.34})`;
+      ctx.lineWidth = 0.8 + Math.abs(fieldAt(laneRatio + 0.1)) * 2.8;
+      ctx.stroke();
     }
   }
 
@@ -619,10 +611,10 @@ function initLiveWeave(shell: HTMLElement): void {
       const x = particle.x * canvasWidth;
       const y = particle.y * canvasHeight;
       const size = 0.7 + Math.abs(field) * 2.6 * intensity;
-      context.beginPath();
-      context.arc(x, y, size, 0, Math.PI * 2);
-      context.fillStyle = `hsla(${(hue + index * 0.61 + field * 42) % 360},92%,70%,${0.14 + Math.abs(field) * 0.62})`;
-      context.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${(hue + index * 0.61 + field * 42) % 360},92%,70%,${0.14 + Math.abs(field) * 0.62})`;
+      ctx.fill();
     });
   }
 
@@ -656,18 +648,17 @@ function initLiveWeave(shell: HTMLElement): void {
       const down = index + columns < nodes.length ? nodes[index + columns] : undefined;
       [right, down].forEach((target) => {
         if (!target) return;
-        context.beginPath();
-        context.moveTo(node.x, node.y);
-        context.lineTo(target.x, target.y);
-        context.strokeStyle = `hsla(${(hue + index * 0.27) % 360},82%,64%,${0.08 + Math.abs(node.value) * 0.31})`;
-        context.lineWidth = 0.65 + Math.abs(node.value) * 1.45;
-        context.stroke();
+        ctx.beginPath();
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.strokeStyle = `hsla(${(hue + index * 0.27) % 360},82%,64%,${0.08 + Math.abs(node.value) * 0.31})`;
+        ctx.lineWidth = 0.65 + Math.abs(node.value) * 1.45;
+        ctx.stroke();
       });
     });
   }
 
   function advanceField(delta: number): void {
-    previousField = smoothedField.slice();
     const smoothing = Number(smoothingInput.value) / 100;
     const memory = Number(trailInput.value) / 100;
     const alpha = clamp(smoothing * (1 - memory * 0.68) * delta * 60, 0.002, 0.88);
@@ -695,7 +686,7 @@ function initLiveWeave(shell: HTMLElement): void {
     requestAnimationFrame(renderFrame);
   }
 
-  function injectPacket(): void {
+  function applyInjection(): void {
     const id = injectSource.value;
     const rawTarget = shell.querySelector<HTMLTextAreaElement>(`[data-raw="${id}"]`);
     const provenanceTarget = shell.querySelector<HTMLInputElement>(`[data-provenance="${id}"]`);
@@ -707,13 +698,13 @@ function initLiveWeave(shell: HTMLElement): void {
     }
 
     try {
-      JSON.parse(injectPacket.value);
+      JSON.parse(injectPacketInput.value);
     } catch {
       notice.textContent = 'Packet was not injected: JSON is invalid.';
       return;
     }
 
-    rawTarget.value = injectPacket.value;
+    rawTarget.value = injectPacketInput.value;
     rawTarget.dispatchEvent(new Event('input', { bubbles: true }));
     if (provenanceTarget) {
       provenanceTarget.value = injectProvenance.value;
@@ -727,11 +718,11 @@ function initLiveWeave(shell: HTMLElement): void {
 
   function freezeMoment(): void {
     sampleSources(true);
-    captureButton.click();
-    if (!sessionPanel.classList.contains('hidden')) {
+    frozenCaptureButton.click();
+    if (!frozenSessionPanel.classList.contains('hidden')) {
       notice.textContent = 'Live source state frozen into a normal replayable CaptureSession.';
       setPresentation('frozen');
-      sessionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      frozenSessionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     notice.textContent = captureError?.textContent?.trim() || 'Freeze failed; Live Weave kept running.';
@@ -781,7 +772,7 @@ function initLiveWeave(shell: HTMLElement): void {
     });
   });
 
-  livePanel.querySelector<HTMLButtonElement>('#liveInject')?.addEventListener('click', injectPacket);
+  livePanel.querySelector<HTMLButtonElement>('#liveInject')?.addEventListener('click', applyInjection);
   livePanel.querySelector<HTMLButtonElement>('#liveFreeze')?.addEventListener('click', freezeMoment);
   livePanel.querySelector<HTMLButtonElement>('#liveDemo')?.addEventListener('click', () => {
     sampleButton?.click();
