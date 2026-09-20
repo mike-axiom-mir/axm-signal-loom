@@ -30,6 +30,7 @@ class CreativityPacket:
     field: Signal
     operations: tuple[str, ...]
     fingerprint: str
+    source_capture: SourceCapture | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -43,6 +44,7 @@ class CreativityPacket:
             "field": self.field.as_dict(),
             "operations": list(self.operations),
             "fingerprint": self.fingerprint,
+            "source_capture": None if self.source_capture is None else self.source_capture.as_dict(),
         }
 
 
