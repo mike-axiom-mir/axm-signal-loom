@@ -98,4 +98,4 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the current flow.
 
 ## License
 
-PolyForm Noncommercial License 1.0.0. See [LICENSE.md](LICENSE.md).
+AXM-owned Signal Loom software is licensed under the Mozilla Public License 2.0 (MPL-2.0). Third-party material, if any, remains under its own terms.
