@@ -293,6 +293,20 @@ input[type="range"] {
   border: 1px solid rgba(128,243,202,0.09);
 }
 
+.organ-readiness {
+  margin-top: 9px;
+  color: #647286;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.organ-readiness[data-state="ready"],
+.organ-readiness[data-state="live"] { color: #86d9b7; }
+.organ-readiness[data-state="needs-provenance"] { color: #ffc88c; }
+.organ-readiness[data-state="waiting-for-signal"] { color: #8390a2; }
+
 .intent-field input { padding: 14px 15px; font-size: 15px; }
 
 .controls {
