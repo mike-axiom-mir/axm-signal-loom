@@ -1,82 +1,126 @@
-# Signal Loom Architecture v0.3
+# Signal Machine Architecture v0.5
 
-Signal Loom is deliberately separate from Universal Creation, MorphTile, games, world builders, and other consumers. It generates bounded proposals; it does not own the systems that consume them.
+Signal Loom remains deliberately separate from Universal Creation, MorphTile, games, world builders and other consumers. v0.5 adds a native machine layer around the Magnet and Loom so source handling is explicit, weighted, replayable and inspectable.
 
-## Correct flow
+## Machine flow
 
 ```text
-INTERNET / LOCAL / CONNECTORS / FILES / SENSORS / MODELS / SIMULATIONS
-                              |
-                         source adapters
-                              |
-                         SIGNAL MAGNET
-                    capture + provenance + freeze
-                              |
-                     replayable source field
-                              |
-                         SIGNAL LOOM
-             mix + cross-map + mutate + oscillate
-                              |
-                     temporary visual/data drafts
-                              |
-                       consuming project
-                    reject / refine / promote
+AUTHORIZED SOURCE CHANNELS
+internet research / browser / local / files / connectors /
+working chats / models / simulations / sensors / custom
+                         |
+                    source organs
+                         |
+                    SOURCE REGISTRY
+               identity + mode + boundary
+                         |
+                  CAPTURE RECIPE
+             payload + weight + provenance
+                         |
+                    SIGNAL MAGNET
+          normalize + weight + freeze + receipt
+                         |
+                    CAPTURE SESSION
+       recipe fp + capture fp + contribution receipts
+                         |
+                     SIGNAL LOOM
+       optional intent bias + seeded bounded mutation
+                         |
+                TEMPORARY PROPOSALS
+                         |
+                  consuming project
+                reject/refine/promote
 ```
 
-A prompt is **not** the source. Text intent may optionally bias interpretation after capture.
+A prompt is not a source. Intent text may optionally bias interpretation after capture.
 
-## Source adapter contract
+## Source registry
 
-The Python core exposes `SourcePacket` with:
+`SourceRegistry` makes the machine aware of its source organs rather than relying on ad-hoc caller conventions.
 
-- `source`: source class such as `web`, `local`, `connector`, `sensor`, `model`, `simulation`, `custom`
-- `label`: human-readable description
-- `payload`: JSON-serializable source material
-- `provenance`: optional source/provenance note
+Each `SourceOrganSpec` declares:
 
-Signal Magnet never grants itself access to a system. The caller obtains data through an authorized channel and hands the resulting packet to the Magnet.
+- stable organ id
+- human label
+- source kind
+- operating mode
+- description
+- whether provenance is required
+- whether it is enabled by default
 
-## Capture
+The default registry contains ten organs:
 
-A capture:
+`browser-local`, `source-material`, `working-chat`, `connector-packet`, `file-packet`, `simulation-state`, `model-output`, `sensor`, `internet-eye`, and `custom`.
 
-1. receives one or more explicit source packets;
-2. normalizes them into one bounded numeric field;
-3. fingerprints the packet set and field;
-4. freezes the result for replay;
-5. passes that frozen source field to the Loom.
+## Capture recipe
 
-Live signals are useful only if the capture is preserved. Otherwise "live randomness" becomes unrecoverable noise.
+A `CaptureRecipe` contains one or more `SourceInput` records.
 
-## Loom
+Each source input preserves:
 
-The Loom may add:
+- organ id
+- JSON-serializable payload
+- requested weight
+- optional label
+- provenance
 
-- optional intent bias
-- seeded RNG
-- oscillators / rhythm
-- bounded mutation
-- cross-mapping
-- project-selected interpretation layers
+The recipe receives a deterministic fingerprint. Weight zero disables that input for the capture. Negative weights are rejected.
 
-Intent is deliberately weaker than the captured field.
+## Weighted Magnet
 
-## Root rules
+`SignalMagnet.capture_weighted(...)` normalizes all positive weights so their contribution totals 1.0.
 
-- **Truth:** distinguish real source capture from procedural generation and never claim unavailable internal model signals.
-- **Agency / non-domination:** source access is explicit; Loom output is a proposal; consuming projects decide whether anything survives.
-- **Continuity:** source packets, captures, seeds, operations and fingerprints support replay and diagnosis.
-- **Wisdom before speed:** cheap exploratory fields come before expensive downstream creation.
-- **Provenance:** adapters should retain where a signal came from.
-- **Bounded chaos:** public APIs constrain signal fields and mutation.
-- **No hidden collection:** a runtime should expose what it captures.
+Every frozen capture records a `SourceContribution` receipt containing:
 
+- source id
+- label
+- normalized influence weight
+- packet fingerprint
+- provenance
 
-## Internet Eye influence adapter
+Changing a payload, provenance-bearing packet, source set, or weight changes the resulting capture fingerprint.
 
-A passive Internet Eye adapter may consume **already-obtained** Shodan-compatible search/export observations and compress them into ambient influence.
+The older equal-weight v0.3 capture path remains unchanged for replay continuity.
 
-Current coarse features include:
+## Capture session
+
+A `CaptureSession` binds:
+
+- the complete recipe
+- recipe fingerprint
+- weighted source capture
+- capture fingerprint
+- capture timestamp
+- session fingerprint
+
+The session fingerprint intentionally binds the recipe and capture, not wall-clock time. Replaying an exported session reconstructs the capture from the recipe and fails if the recorded fingerprints do not match.
+
+This is the continuity boundary that allows live inputs to become recoverable creative accidents.
+
+## Working-chat bridge
+
+A working chat is one source organ among many.
+
+It does not gain merge or creative authority by being an AI source. Its packet must include provenance and receives an explicit weight like every other source.
+
+Example packet payload:
+
+```json
+{
+  "themes": ["collapse", "repair", "metallic rain"],
+  "weights": [0.7, 0.4, 0.8]
+}
+```
+
+The machine can blend that packet with browser state, simulations, public internet aggregates or other sources.
+
+## Internet Eye
+
+Internet Eye is now a native registered source organ.
+
+The machine accepts a Shodan-compatible response or matches array, then runs the target-blind reducer before capture.
+
+Preserved aggregate features:
 
 - port mix
 - transport mix
@@ -88,14 +132,60 @@ Current coarse features include:
 - unique-port ratio
 - unique-product ratio
 
-The adapter is intentionally target-blind: it does not preserve raw IP addresses, hostnames, organization names, or banner text in the resulting SourcePacket.
+Not preserved in the emitted Internet Eye packet:
 
-It performs no network requests, host lookups, active scans, vulnerability checks, or exploit logic. Retrieval remains the responsibility of an authorized caller or connector. The artistic system receives only the reduced influence packet.
+- raw IP addresses
+- hostnames
+- organization names
+- raw banner text
 
-## Current boundaries
+The organ performs no network request, active scan, host lookup, vulnerability check or exploit logic. Retrieval stays with an authorized caller/source connection.
 
-The browser playground captures visible browser-local signals and accepts source material / external JSON packets. It does not autonomously browse the internet or open private connections.
+## Loom
 
-A working chat, connector, local process, sensor bridge or future adapter can gather information through its own authorized capability and submit a source packet.
+The Loom consumes the frozen weighted field and may add:
 
-The Python and browser runtimes are deterministic inside themselves but are not yet cross-runtime bit-identical.
+- optional intent bias
+- seeded RNG
+- oscillators/rhythm
+- bounded mutation
+- cross-mapping
+- project-selected interpretation layers
+
+The captured source field remains the dominant input.
+
+## Browser machine
+
+The hosted v0.5 playground mirrors the architecture visibly:
+
+- ten source-organ cards
+- explicit enabled state
+- per-organ weight
+- provenance fields
+- frozen session receipt
+- normalized influence bars
+- inspectable reduced packets
+- explicit local save/load
+- no automatic persistence
+- re-weave without recapture
+- target-blind Internet Eye reduction before session exposure
+
+The browser and Python runtimes are deterministic within themselves but are not yet bit-identical.
+
+## Root rules
+
+- **Truth:** distinguish real source capture, aggregate reduction and procedural mutation; never claim unavailable source access.
+- **Agency / non-domination:** source access is explicit; source weights are visible; proposals never silently mutate consuming projects.
+- **Continuity:** recipes, sessions, contributions, seeds and fingerprints preserve replay.
+- **Wisdom before speed:** cheap source fields and proposals precede expensive downstream generation.
+- **Provenance:** sources requiring external authority fail closed without provenance.
+- **No hidden collection:** the runtime exposes which organs are enabled and what is frozen.
+- **Bounded chaos:** weights and fields are normalized/bounded; mutation remains bounded.
+
+## Current boundary
+
+The machine has a native Internet Eye organ, but the public playground does not contain a live Shodan credential or private source connection.
+
+A connected working chat, connector, local process, sensor bridge or future secure backend may gather information through its own authorized capability and feed the relevant organ.
+
+No source organ grants itself permission.

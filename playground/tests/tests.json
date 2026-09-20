@@ -1,68 +1,84 @@
 [
   {
-    "name": "Capture sources and weave visual drafts",
+    "name": "Capture weighted native source organs and weave proposals",
     "sanity": true,
     "viewport": "desktop",
     "covers": [
-      "signal magnet capture",
-      "local live signals",
-      "source material adapter",
-      "visual draft generation"
+      "native source-organ registry",
+      "weighted capture recipe",
+      "influence receipt",
+      "visual proposal generation"
     ],
-    "description": "Verifies the primary workflow captures visible source inputs first and then creates visual drafts from the frozen capture.",
+    "description": "Verifies the primary Signal Machine workflow exposes native organs, freezes a weighted capture, and renders visual proposals.",
     "steps": [
-      "Enter \"wind 8 m/s, wet pavement, midnight train\" in Source material",
-      "Leave Intent bias empty",
+      "Keep Browser Local and Source Material enabled",
+      "Press \"Capture + weave\"",
+      "Inspect the Influence receipt and proposal grid"
+    ],
+    "expected": "A frozen session is visible with Browser Local and Source Material influence percentages, and twelve visual proposal cards are rendered."
+  },
+  {
+    "name": "Add a working-chat organ with provenance",
+    "viewport": "desktop",
+    "covers": [
+      "working-chat packet bridge",
+      "source provenance",
+      "source weighting"
+    ],
+    "description": "Verifies a working chat can become one weighted source organ instead of replacing the machine.",
+    "steps": [
+      "Enable Working Chat",
+      "Enter {\"themes\":[\"glass forest\",\"repair\"],\"energy\":0.8} in its JSON input and \"working-chat QA\" in its provenance input",
+      "Set Working Chat influence weight above zero and press \"Capture + weave\""
+    ],
+    "expected": "Working Chat appears in the frozen Influence receipt with a visible normalized percentage and packet fingerprint."
+  },
+  {
+    "name": "Internet Eye reduces observations before exposure",
+    "viewport": "desktop",
+    "covers": [
+      "native Internet Eye organ",
+      "target-blind reduction",
+      "provenance preservation"
+    ],
+    "description": "Verifies raw Shodan-compatible observations are reduced before the frozen session is exposed.",
+    "steps": [
+      "Enable Internet Eye",
+      "Enter {\"matches\":[{\"ip_str\":\"203.0.113.55\",\"hostnames\":[\"hidden.invalid\"],\"port\":443,\"transport\":\"tcp\",\"location\":{\"country_code\":\"NL\"},\"product\":\"nginx\",\"org\":\"Example Org\",\"data\":\"private banner\",\"ssl\":{\"enabled\":true}}]} in its JSON input",
+      "Enter \"QA indexed fixture\" as provenance and press \"Capture + weave\", then open \"Inspect frozen source packets\""
+    ],
+    "expected": "Internet Eye is present as target-blind aggregate influence, while the raw IP, hostname, organization name, and banner text are not visible in the frozen session JSON."
+  },
+  {
+    "name": "Reject missing provenance without replacing the prior session",
+    "viewport": "desktop",
+    "covers": [
+      "provenance guardrail",
+      "failed capture preservation",
+      "no silent rewrite"
+    ],
+    "description": "Verifies a provenance-required source cannot silently enter a capture.",
+    "steps": [
+      "Enable Connector Packet",
+      "Enter {\"signal\":0.5} in its JSON input but leave provenance empty",
       "Press \"Capture + weave\""
     ],
-    "expected": "A frozen capture fingerprint is shown and twelve visual draft cards appear while the Intent bias field remains optional."
+    "expected": "A visible error says Connector Packet requires provenance and no new session receipt replaces the prior frozen session."
   },
   {
-    "name": "Replay one frozen capture",
-    "viewport": "desktop",
-    "covers": [
-      "capture continuity",
-      "deterministic replay",
-      "result fingerprints"
-    ],
-    "description": "Verifies weaving the same frozen capture with unchanged controls does not silently recapture live signals.",
-    "steps": [
-      "Press \"Capture + weave\" once and note draft #01 fingerprint",
-      "Do not change the seed, chaos, intent, or source fields",
-      "Press \"Weave captured\""
-    ],
-    "expected": "The frozen capture fingerprint remains unchanged and draft #01 keeps the same result fingerprint."
-  },
-  {
-    "name": "Reject malformed external packet",
-    "viewport": "desktop",
-    "covers": [
-      "external packet adapter",
-      "invalid JSON guardrail",
-      "no silent capture"
-    ],
-    "description": "Verifies malformed connector or working-chat packets are rejected visibly instead of being silently interpreted.",
-    "steps": [
-      "Enter \"{bad json\" in External signal packet · JSON",
-      "Press \"Capture + weave\"",
-      "Read the visible capture error"
-    ],
-    "expected": "A visible message says the external packet is not valid JSON and no new frozen capture is created."
-  },
-  {
-    "name": "Inspect source provenance on mobile",
+    "name": "Explicitly save and reload a frozen session on mobile",
     "viewport": "mobile",
     "covers": [
-      "draft inspection",
-      "captured source visibility",
-      "mobile layout"
+      "explicit local session save",
+      "session reload",
+      "mobile machine controls"
     ],
-    "description": "Verifies the result packet exposes the source capture rather than pretending the optional intent text was the source.",
+    "description": "Verifies persistence occurs only after the user explicitly requests it.",
     "steps": [
-      "Press a visual draft card",
-      "Scroll to the Captured Result inspector",
-      "Read the JSON packet"
+      "Press \"Capture + weave\"",
+      "Press \"Save session locally\"",
+      "Press \"Load saved session\""
     ],
-    "expected": "The packet visibly contains capture.local, sourceMaterial, externalPacket, capture fingerprint, intentBias, seed, chaos, result fingerprint, and field data."
+    "expected": "The frozen session remains visible with the same session fingerprint and influence receipt after explicit reload."
   }
 ]

@@ -30,3 +30,8 @@ jobs:
       - name: Build visual playground
         working-directory: playground
         run: npm run build
+
+      - name: Smoke Signal Machine
+        env:
+          PYTHONPATH: src
+        run: python -m signal_loom.machine_cli --recipe examples/recipes/working-chat-internet-eye.json --seed 4837291 --count 3 --chaos 0.72 --intent "curious machine ecology" --out /tmp/signal-machine-smoke
