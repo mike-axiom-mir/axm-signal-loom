@@ -1,5 +1,7 @@
 import './styles.css';
 
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+
 type LocalSignals = {
   pointerX: number;
   pointerY: number;
@@ -9,13 +11,45 @@ type LocalSignals = {
   clockPhase: number;
 };
 
-type SourceCapture = {
+type OrganDefinition = {
+  id: string;
+  label: string;
+  kind: string;
+  description: string;
+  defaultEnabled: boolean;
+  defaultWeight: number;
+  provenanceRequired: boolean;
+  inputMode: 'local' | 'text' | 'json' | 'internet-eye';
+};
+
+type OrganState = {
+  enabled: boolean;
+  weight: number;
+  provenance: string;
+  raw: string;
+};
+
+type Contribution = {
+  organId: string;
+  label: string;
+  normalizedWeight: number;
+  provenance: string;
+  packetFingerprint: string;
+};
+
+type CaptureSession = {
   version: string;
   capturedAt: string;
-  local: LocalSignals;
-  sourceMaterial: string;
-  externalPacket: unknown | null;
+  recipeFingerprint: string;
   fingerprint: string;
+  contributions: Contribution[];
+  packets: Array<{
+    source: string;
+    label: string;
+    payload: JsonValue;
+    provenance: string;
+  }>;
+  local: LocalSignals;
 };
 
 type Draft = {
@@ -27,75 +61,181 @@ type Draft = {
   field: number[];
   palette: number[];
   fingerprint: string;
-  capture: SourceCapture;
+  session: CaptureSession;
 };
 
 const app = document.querySelector<HTMLDivElement>('#app');
-if (!app) throw new Error('Missing #app');
+if (!app) {
+  throw new Error('Missing #app');
+}
+
+const ORGANS: OrganDefinition[] = [
+  {
+    id: 'browser-local',
+    label: 'Browser Local',
+    kind: 'local-live',
+    description: 'Pointer, motion, scroll, viewport and clock phase captured visibly from this browser.',
+    defaultEnabled: true,
+    defaultWeight: 1,
+    provenanceRequired: false,
+    inputMode: 'local',
+  },
+  {
+    id: 'source-material',
+    label: 'Source Material',
+    kind: 'manual',
+    description: 'Explicit text or structured material supplied by the operator.',
+    defaultEnabled: true,
+    defaultWeight: 0.7,
+    provenanceRequired: false,
+    inputMode: 'text',
+  },
+  {
+    id: 'working-chat',
+    label: 'Working Chat',
+    kind: 'connector',
+    description: 'A structured packet supplied by another working chat or model seat.',
+    defaultEnabled: false,
+    defaultWeight: 0.8,
+    provenanceRequired: true,
+    inputMode: 'json',
+  },
+  {
+    id: 'simulation-state',
+    label: 'Simulation State',
+    kind: 'simulation',
+    description: 'Game, world, physics or deterministic simulation state.',
+    defaultEnabled: false,
+    defaultWeight: 0.6,
+    provenanceRequired: false,
+    inputMode: 'json',
+  },
+  {
+    id: 'internet-eye',
+    label: 'Internet Eye',
+    kind: 'public-index',
+    description: 'Target-blind aggregate influence from Shodan-compatible indexed observations.',
+    defaultEnabled: false,
+    defaultWeight: 0.55,
+    provenanceRequired: true,
+    inputMode: 'internet-eye',
+  },
+  {
+    id: 'connector-packet',
+    label: 'Connector Packet',
+    kind: 'connector',
+    description: 'Structured data supplied through any authorized external connector.',
+    defaultEnabled: false,
+    defaultWeight: 0.6,
+    provenanceRequired: true,
+    inputMode: 'json',
+  },
+  {
+    id: 'file-packet',
+    label: 'File Packet',
+    kind: 'local',
+    description: 'Content or metadata explicitly extracted from a selected file.',
+    defaultEnabled: false,
+    defaultWeight: 0.5,
+    provenanceRequired: true,
+    inputMode: 'json',
+  },
+  {
+    id: 'model-output',
+    label: 'Model Output',
+    kind: 'model',
+    description: 'Output explicitly supplied by an AI/model adapter.',
+    defaultEnabled: false,
+    defaultWeight: 0.5,
+    provenanceRequired: true,
+    inputMode: 'json',
+  },
+  {
+    id: 'sensor',
+    label: 'Sensor',
+    kind: 'sensor',
+    description: 'Measurements explicitly supplied through a sensor bridge.',
+    defaultEnabled: false,
+    defaultWeight: 0.5,
+    provenanceRequired: true,
+    inputMode: 'json',
+  },
+  {
+    id: 'custom',
+    label: 'Custom',
+    kind: 'custom',
+    description: 'Any caller-defined JSON-serializable signal packet.',
+    defaultEnabled: false,
+    defaultWeight: 0.5,
+    provenanceRequired: true,
+    inputMode: 'json',
+  },
+];
+
+const organStates = new Map<string, OrganState>(
+  ORGANS.map((organ) => [
+    organ.id,
+    {
+      enabled: organ.defaultEnabled,
+      weight: organ.defaultWeight,
+      provenance: '',
+      raw: '',
+    },
+  ]),
+);
+
+organStates.get('source-material')!.raw = 'metal rain, tiny impossible garden, repair under pressure';
+
+let activeSession: CaptureSession | null = null;
+let selectedDraft: Draft | null = null;
+let pointerX = 0.5;
+let pointerY = 0.5;
+let pointerSpeed = 0;
+let lastPointerX = 0.5;
+let lastPointerY = 0.5;
+let lastPointerAt = performance.now();
 
 app.innerHTML = `
   <main class="shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">AXM EXPERIMENT / SIGNAL MAGNET → LOOM</p>
-        <h1>Catch signals first.<br>Make art second.</h1>
-        <p class="lede">The prompt is no longer the source. The Magnet captures whatever is available, freezes it into a replayable packet, then the Loom turns that packet into visual drafts.</p>
+        <p class="eyebrow">AXM SIGNAL MACHINE / v0.5</p>
+        <h1>Many eyes.<br>One frozen accident.</h1>
+        <p class="lede">Source organs capture the world you explicitly give them. Weight the influences, freeze a replayable session, then let the Loom turn that mixture into strange visual proposals.</p>
       </div>
       <div class="status-card">
         <span class="pulse-dot"></span>
         <div>
-          <strong>Signal Magnet online</strong>
-          <small>explicit sources • frozen capture • replayable</small>
+          <strong>10 source organs registered</strong>
+          <small>explicit capture • weighted • replayable</small>
         </div>
       </div>
     </header>
 
-    <section class="workbench">
+    <section class="machine-panel">
       <div class="section-title">
         <div>
-          <p class="eyebrow">01 / MAGNET</p>
-          <h2>Source capture</h2>
+          <p class="eyebrow">01 / SOURCE REGISTRY</p>
+          <h2>Choose the eyes</h2>
         </div>
-        <p>Local signals are visible below. Add material from any other source through text or a generic JSON packet.</p>
+        <p>Nothing is silently connected. Enable only the organs you want in this capture; each source keeps its provenance and influence weight.</p>
       </div>
-
-      <div class="signal-strip" id="signalStrip"></div>
-
-      <div class="source-grid">
-        <label class="source-field">
-          <span>Source material</span>
-          <textarea id="sourceMaterial" rows="5" placeholder="Paste anything gathered from the internet, a local file, a connector, another model, notes, sensor output, game state…"></textarea>
-          <small>Raw material. It is captured as signal input, not treated as a prompt.</small>
-        </label>
-
-        <label class="source-field">
-          <span>External signal packet · JSON</span>
-          <textarea id="packetInput" rows="5" placeholder='{"source":"web","label":"city weather","payload":{"wind":0.8,"rain":0.2}}'></textarea>
-          <small>Generic adapter boundary. Any tool or working chat can provide a packet with its own provenance.</small>
-        </label>
-      </div>
-
-      <div id="captureError" class="capture-error hidden"></div>
-
-      <div class="capture-row">
-        <button id="capture" class="primary">Capture + weave</button>
-        <button id="weave" class="secondary">Weave captured</button>
-        <span id="captureInfo" class="capture-info">No capture yet</span>
-      </div>
+      <div id="liveSignals" class="live-signals"></div>
+      <div id="organGrid" class="organ-grid"></div>
     </section>
 
-    <section class="workbench loom-panel">
+    <section class="machine-panel control-panel">
       <div class="section-title">
         <div>
-          <p class="eyebrow">02 / LOOM</p>
-          <h2>Interpretation controls</h2>
+          <p class="eyebrow">02 / CAPTURE RECIPE</p>
+          <h2>Freeze the mixture</h2>
         </div>
-        <p>Intent can gently bias the interpretation, but it does not replace the captured source field.</p>
+        <p>Capture freezes the enabled source packets and their weights. Re-weaving never silently recaptures live state.</p>
       </div>
 
       <label class="intent-field">
-        <span>Intent bias · optional</span>
-        <input id="intent" value="" placeholder="e.g. eerie architecture, playful machine, no bias…" autocomplete="off" />
+        <span>Intent bias · optional, never the source</span>
+        <input id="intent" value="" placeholder="e.g. impossible civic garden, no bias…" autocomplete="off" />
       </label>
 
       <div class="controls">
@@ -118,18 +258,42 @@ app.innerHTML = `
         </label>
       </div>
 
+      <div id="captureError" class="capture-error hidden"></div>
+
       <div class="actions">
+        <button id="capture" class="primary">Capture + weave</button>
+        <button id="weave" class="secondary">Weave frozen session</button>
         <button id="reroll" class="secondary">New seed</button>
-        <span id="runInfo" class="run-info"></span>
+        <span id="runInfo" class="run-info">No session yet</span>
       </div>
+    </section>
+
+    <section id="sessionPanel" class="session-panel hidden">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">03 / FROZEN SESSION</p>
+          <h2>Influence receipt</h2>
+        </div>
+        <p id="sessionMeta"></p>
+      </div>
+      <div id="influenceBars" class="influence-bars"></div>
+      <div class="session-actions">
+        <button id="copySession" class="secondary">Copy session JSON</button>
+        <button id="saveSession" class="secondary">Save session locally</button>
+        <button id="loadSession" class="secondary">Load saved session</button>
+      </div>
+      <details>
+        <summary>Inspect frozen source packets</summary>
+        <pre id="sessionJson"></pre>
+      </details>
     </section>
 
     <section class="results-head">
       <div>
-        <p class="eyebrow">03 / TEMPORARY FIELD</p>
-        <h2>Visual drafts</h2>
+        <p class="eyebrow">04 / TEMPORARY FIELD</p>
+        <h2>Visual proposals</h2>
       </div>
-      <p>Same frozen capture + seed + settings = same result.</p>
+      <p>Same session + seed + intent + chaos = same proposals.</p>
     </section>
 
     <section id="grid" class="grid" aria-live="polite"></section>
@@ -141,10 +305,10 @@ app.innerHTML = `
         <p id="inspectMeta"></p>
       </div>
       <div class="inspector-actions">
-        <button id="copyRecipe" class="secondary">Copy full packet</button>
+        <button id="copyDraft" class="secondary">Copy proposal packet</button>
         <button id="closeInspector" class="ghost">Close</button>
       </div>
-      <pre id="recipe"></pre>
+      <pre id="draftJson"></pre>
     </section>
 
     <footer>
@@ -154,31 +318,24 @@ app.innerHTML = `
   </main>
 `;
 
-const sourceMaterial = document.querySelector<HTMLTextAreaElement>('#sourceMaterial')!;
-const packetInput = document.querySelector<HTMLTextAreaElement>('#packetInput')!;
+const organGrid = document.querySelector<HTMLElement>('#organGrid')!;
+const liveSignals = document.querySelector<HTMLElement>('#liveSignals')!;
 const intentInput = document.querySelector<HTMLInputElement>('#intent')!;
 const seedInput = document.querySelector<HTMLInputElement>('#seed')!;
 const chaosInput = document.querySelector<HTMLInputElement>('#chaos')!;
 const chaosValue = document.querySelector<HTMLElement>('#chaosValue')!;
 const countInput = document.querySelector<HTMLSelectElement>('#count')!;
-const signalStrip = document.querySelector<HTMLElement>('#signalStrip')!;
-const captureInfo = document.querySelector<HTMLElement>('#captureInfo')!;
 const captureError = document.querySelector<HTMLElement>('#captureError')!;
-const grid = document.querySelector<HTMLElement>('#grid')!;
 const runInfo = document.querySelector<HTMLElement>('#runInfo')!;
+const sessionPanel = document.querySelector<HTMLElement>('#sessionPanel')!;
+const sessionMeta = document.querySelector<HTMLElement>('#sessionMeta')!;
+const influenceBars = document.querySelector<HTMLElement>('#influenceBars')!;
+const sessionJson = document.querySelector<HTMLElement>('#sessionJson')!;
+const grid = document.querySelector<HTMLElement>('#grid')!;
 const inspector = document.querySelector<HTMLElement>('#inspector')!;
 const inspectTitle = document.querySelector<HTMLElement>('#inspectTitle')!;
 const inspectMeta = document.querySelector<HTMLElement>('#inspectMeta')!;
-const recipe = document.querySelector<HTMLElement>('#recipe')!;
-
-let activeCapture: SourceCapture | null = null;
-let selected: Draft | null = null;
-let pointerX = 0.5;
-let pointerY = 0.5;
-let pointerSpeed = 0;
-let lastPointerX = 0.5;
-let lastPointerY = 0.5;
-let lastPointerAt = performance.now();
+const draftJson = document.querySelector<HTMLElement>('#draftJson')!;
 
 function hashText(text: string): number {
   let hash = 2166136261;
@@ -187,6 +344,21 @@ function hashText(text: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+function fingerprint(value: unknown): string {
+  return hashText(stableStringify(value)).toString(16).padStart(8, '0');
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return '[' + value.map((item) => stableStringify(item)).join(',') + ']';
+  }
+  const record = value as Record<string, unknown>;
+  return '{' + Object.keys(record).sort().map((key) => JSON.stringify(key) + ':' + stableStringify(record[key])).join(',') + '}';
 }
 
 function mulberry32(seed: number): () => number {
@@ -218,45 +390,272 @@ function localSnapshot(): LocalSignals {
   };
 }
 
-function captureSources(): SourceCapture | null {
-  let externalPacket: unknown | null = null;
-  const rawPacket = packetInput.value.trim();
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    };
+    return entities[character] ?? character;
+  });
+}
+
+function parseJson(raw: string, label: string): JsonValue {
+  try {
+    return JSON.parse(raw) as JsonValue;
+  } catch {
+    throw new Error(`${label} contains invalid JSON.`);
+  }
+}
+
+function entropy(values: string[]): number {
+  if (values.length <= 1) return 0;
+  const counts = new Map<string, number>();
+  values.forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1));
+  let result = 0;
+  counts.forEach((count) => {
+    const p = count / values.length;
+    result -= p * Math.log2(p);
+  });
+  const maximum = Math.log2(Math.max(2, counts.size));
+  return maximum === 0 ? 0 : Math.min(1, result / maximum);
+}
+
+function topCounts(values: string[], limit = 12): Record<string, number> {
+  const counts = new Map<string, number>();
+  values.forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1));
+  return Object.fromEntries(
+    [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, limit),
+  );
+}
+
+function reduceInternetEye(raw: JsonValue): JsonValue {
+  let matches: JsonValue[] = [];
+  if (Array.isArray(raw)) {
+    matches = raw;
+  } else if (raw && typeof raw === 'object' && Array.isArray((raw as Record<string, JsonValue>).matches)) {
+    matches = (raw as Record<string, JsonValue>).matches as JsonValue[];
+  } else {
+    throw new Error('Internet Eye expects a Shodan-compatible response or matches array.');
+  }
+
+  const ports: string[] = [];
+  const transports: string[] = [];
+  const countries: string[] = [];
+  const products: string[] = [];
+  const orgHashes: string[] = [];
+  const bannerHashes: string[] = [];
+  let tlsCount = 0;
+  let observations = 0;
+
+  matches.forEach((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const match = item as Record<string, JsonValue>;
+    observations += 1;
+    if (typeof match.port === 'number') ports.push(String(match.port));
+    if (typeof match.transport === 'string' && match.transport) transports.push(match.transport.toLowerCase());
+    if (match.location && typeof match.location === 'object' && !Array.isArray(match.location)) {
+      const location = match.location as Record<string, JsonValue>;
+      const country = location.country_code ?? location.country_name;
+      if (typeof country === 'string' && country) countries.push(country.toUpperCase());
+    }
+    products.push(typeof match.product === 'string' && match.product ? match.product.toLowerCase() : 'unknown');
+    if (typeof match.org === 'string' && match.org) orgHashes.push(fingerprint(match.org.toLowerCase().trim()));
+    if (typeof match.data === 'string' && match.data) bannerHashes.push(fingerprint(match.data));
+    if (match.ssl && typeof match.ssl === 'object') tlsCount += 1;
+  });
+
+  if (observations === 0) {
+    throw new Error('Internet Eye needs at least one usable observation.');
+  }
+
+  const aggregate = {
+    mode: 'target-blind-aggregate',
+    observationCount: observations,
+    portMix: topCounts(ports),
+    transportMix: topCounts(transports),
+    countryMix: topCounts(countries),
+    productMix: topCounts(products),
+    orgDiversity: Number(entropy(orgHashes).toFixed(6)),
+    bannerDiversity: Number(entropy(bannerHashes).toFixed(6)),
+    tlsShare: Number((tlsCount / observations).toFixed(6)),
+    uniquePortRatio: Number((new Set(ports).size / observations).toFixed(6)),
+    uniqueProductRatio: Number((new Set(products).size / observations).toFixed(6)),
+  };
+
+  return {
+    ...aggregate,
+    fingerprint: fingerprint(aggregate),
+  };
+}
+
+function renderOrganCards(): void {
+  organGrid.innerHTML = ORGANS.map((organ) => {
+    const state = organStates.get(organ.id)!;
+    const isLocal = organ.inputMode === 'local';
+    const placeholder = organ.inputMode === 'internet-eye'
+      ? '{"matches":[{"port":443,"transport":"tcp","location":{"country_code":"NL"},"product":"nginx","ssl":{"enabled":true}}]}'
+      : organ.inputMode === 'text'
+        ? 'Material, notes, observations…'
+        : '{"signal":"value"}';
+    const input = isLocal
+      ? '<div class="local-source-note">Captured from the visible local signal strip at capture time.</div>'
+      : `<textarea data-raw="${organ.id}" rows="4" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state.raw)}</textarea>`;
+    const provenance = organ.provenanceRequired
+      ? `<input data-provenance="${organ.id}" class="provenance-input" value="${escapeHtml(state.provenance)}" placeholder="Provenance required" />`
+      : '';
+
+    return `
+      <article class="organ-card ${state.enabled ? 'enabled' : ''}" data-organ-card="${organ.id}">
+        <div class="organ-head">
+          <label class="toggle">
+            <input data-enabled="${organ.id}" type="checkbox" ${state.enabled ? 'checked' : ''} />
+            <span></span>
+          </label>
+          <div>
+            <strong>${organ.label}</strong>
+            <small>${organ.kind}</small>
+          </div>
+        </div>
+        <p>${organ.description}</p>
+        <label class="weight-field">
+          <span>Influence weight <b data-weight-value="${organ.id}">${state.weight.toFixed(2)}</b></span>
+          <input data-weight="${organ.id}" type="range" min="0" max="100" value="${Math.round(state.weight * 100)}" />
+        </label>
+        ${input}
+        ${provenance}
+        ${organ.id === 'internet-eye' ? '<div class="eye-boundary">Native reducer: raw targets never enter the frozen session.</div>' : ''}
+      </article>
+    `;
+  }).join('');
+
+  organGrid.querySelectorAll<HTMLInputElement>('[data-enabled]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const id = input.dataset.enabled!;
+      const state = organStates.get(id)!;
+      state.enabled = input.checked;
+      document.querySelector<HTMLElement>(`[data-organ-card="${id}"]`)?.classList.toggle('enabled', input.checked);
+    });
+  });
+
+  organGrid.querySelectorAll<HTMLInputElement>('[data-weight]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const id = input.dataset.weight!;
+      const state = organStates.get(id)!;
+      state.weight = Number(input.value) / 100;
+      const value = document.querySelector<HTMLElement>(`[data-weight-value="${id}"]`);
+      if (value) value.textContent = state.weight.toFixed(2);
+    });
+  });
+
+  organGrid.querySelectorAll<HTMLTextAreaElement>('[data-raw]').forEach((input) => {
+    input.addEventListener('input', () => {
+      organStates.get(input.dataset.raw!)!.raw = input.value;
+    });
+  });
+
+  organGrid.querySelectorAll<HTMLInputElement>('[data-provenance]').forEach((input) => {
+    input.addEventListener('input', () => {
+      organStates.get(input.dataset.provenance!)!.provenance = input.value;
+    });
+  });
+}
+
+function captureSession(): CaptureSession | null {
   captureError.classList.add('hidden');
   captureError.textContent = '';
 
-  if (rawPacket) {
-    try {
-      externalPacket = JSON.parse(rawPacket);
-    } catch {
-      captureError.textContent = 'External packet is not valid JSON. Nothing was captured.';
-      captureError.classList.remove('hidden');
-      return null;
+  try {
+    const local = localSnapshot();
+    const enabled = ORGANS.filter((organ) => organStates.get(organ.id)!.enabled && organStates.get(organ.id)!.weight > 0);
+    if (enabled.length === 0) {
+      throw new Error('Enable at least one source organ with a positive weight.');
     }
-  }
 
-  const base = {
-    version: 'axm.signal-magnet.capture/0.3',
-    capturedAt: new Date().toISOString(),
-    local: localSnapshot(),
-    sourceMaterial: sourceMaterial.value,
-    externalPacket,
-  };
-  const fingerprint = hashText(JSON.stringify(base)).toString(16).padStart(8, '0');
-  return { ...base, fingerprint };
+    const totalWeight = enabled.reduce((sum, organ) => sum + organStates.get(organ.id)!.weight, 0);
+    const packets: CaptureSession['packets'] = [];
+    const contributions: Contribution[] = [];
+
+    enabled.forEach((organ) => {
+      const state = organStates.get(organ.id)!;
+      if (organ.provenanceRequired && !state.provenance.trim()) {
+        throw new Error(`${organ.label} requires provenance before capture.`);
+      }
+
+      let payload: JsonValue;
+      if (organ.inputMode === 'local') {
+        payload = local as unknown as JsonValue;
+      } else if (organ.inputMode === 'text') {
+        payload = state.raw;
+      } else {
+        if (!state.raw.trim()) {
+          throw new Error(`${organ.label} is enabled but has no input.`);
+        }
+        const parsed = parseJson(state.raw, organ.label);
+        payload = organ.inputMode === 'internet-eye' ? reduceInternetEye(parsed) : parsed;
+      }
+
+      const packet = {
+        source: organ.id,
+        label: organ.label,
+        payload,
+        provenance: state.provenance,
+      };
+      const normalizedWeight = state.weight / totalWeight;
+      packets.push(packet);
+      contributions.push({
+        organId: organ.id,
+        label: organ.label,
+        normalizedWeight,
+        provenance: state.provenance,
+        packetFingerprint: fingerprint(packet),
+      });
+    });
+
+    const recipe = {
+      version: 'axm.signal-machine.recipe/0.5',
+      inputs: contributions.map((contribution, index) => ({
+        organId: contribution.organId,
+        weight: contribution.normalizedWeight,
+        packetFingerprint: contribution.packetFingerprint,
+        provenance: contribution.provenance,
+        packet: packets[index],
+      })),
+    };
+    const recipeFingerprint = fingerprint(recipe);
+    const base = {
+      version: 'axm.signal-machine.session/0.5',
+      recipeFingerprint,
+      contributions,
+      packets,
+      local,
+    };
+    return {
+      ...base,
+      capturedAt: new Date().toISOString(),
+      fingerprint: fingerprint(base),
+    };
+  } catch (error) {
+    captureError.textContent = error instanceof Error ? error.message : 'Capture failed.';
+    captureError.classList.remove('hidden');
+    return null;
+  }
 }
 
-function sourceVector(capture: SourceCapture, width: number): number[] {
-  const sourceSeed = hashText(JSON.stringify({
-    local: capture.local,
-    sourceMaterial: capture.sourceMaterial,
-    externalPacket: capture.externalPacket,
-  }));
-  const random = mulberry32(sourceSeed);
-  const numeric = Object.values(capture.local);
-  return Array.from({ length: width }, (_, index) => {
-    const local = numeric[index % numeric.length] ?? 0;
-    const centered = local * 2 - 1;
-    return clamp((random() * 2 - 1) * 0.72 + centered * 0.28);
+function sourceVector(session: CaptureSession, width: number): number[] {
+  const randomizers = session.packets.map((packet) => mulberry32(hashText(stableStringify(packet))));
+  return Array.from({ length: width }, () => {
+    let combined = 0;
+    randomizers.forEach((random, index) => {
+      const contribution = session.contributions[index];
+      combined += (random() * 2 - 1) * (contribution?.normalizedWeight ?? 0);
+    });
+    return clamp(combined);
   });
 }
 
@@ -266,22 +665,26 @@ function intentVector(intent: string, width: number): number[] {
   return Array.from({ length: width }, () => random() * 2 - 1);
 }
 
-function makeDraft(capture: SourceCapture, intent: string, rootSeed: number, index: number, chaos: number): Draft {
+function makeDraft(session: CaptureSession, intent: string, rootSeed: number, index: number, chaos: number): Draft {
   const width = 72;
-  const source = sourceVector(capture, width);
+  const source = sourceVector(session, width);
   const bias = intentVector(intent, width);
-  const localSeed = (rootSeed ^ hashText(capture.fingerprint) ^ Math.imul(index + 1, 2654435761)) >>> 0;
+  const localSeed = (rootSeed ^ hashText(session.fingerprint) ^ Math.imul(index + 1, 2654435761)) >>> 0;
   const random = mulberry32(localSeed);
   const field: number[] = [];
 
   for (let i = 0; i < width; i += 1) {
     const noise = random() * 2 - 1;
     const rhythm = Math.sin((i / (width - 1)) * Math.PI * 2 * (1.3 + chaos * 7.7) + index * 0.37);
-    const mixed = (source[i] ?? 0) * 0.62 + (bias[i] ?? 0) * 0.12 + noise * (0.08 + chaos * 0.28) + rhythm * (0.12 + chaos * 0.22);
-    field.push(clamp(mixed + (random() * 2 - 1) * chaos * 0.22));
+    const mixed =
+      (source[i] ?? 0) * 0.66 +
+      (bias[i] ?? 0) * 0.1 +
+      noise * (0.07 + chaos * 0.27) +
+      rhythm * (0.12 + chaos * 0.2);
+    field.push(clamp(mixed + (random() * 2 - 1) * chaos * 0.2));
   }
 
-  const hueBase = (hashText(capture.fingerprint) + index * 47 + Math.floor(chaos * 100)) % 360;
+  const hueBase = (hashText(session.fingerprint) + index * 47 + Math.floor(chaos * 100)) % 360;
   const palette = [
     hueBase,
     (hueBase + 44 + Math.abs(field[5] ?? 0) * 80) % 360,
@@ -289,11 +692,26 @@ function makeDraft(capture: SourceCapture, intent: string, rootSeed: number, ind
   ];
   const modes = ['ribbon', 'bloom', 'shards', 'orbit', 'terrain', 'mesh', 'constellation'];
   const mode = modes[Math.floor(random() * modes.length)] ?? 'ribbon';
-  const fingerprint = hashText(`${capture.fingerprint}|${intent}|${rootSeed}|${index}|${chaos.toFixed(4)}|${field.map(value => value.toFixed(4)).join(',')}`)
-    .toString(16)
-    .padStart(8, '0');
+  const resultFingerprint = fingerprint({
+    session: session.fingerprint,
+    intent,
+    rootSeed,
+    index,
+    chaos: Number(chaos.toFixed(4)),
+    field: field.map((value) => Number(value.toFixed(5))),
+  });
 
-  return { index, seed: rootSeed, chaos, intent, mode, field, palette, fingerprint, capture };
+  return {
+    index,
+    seed: rootSeed,
+    chaos,
+    intent,
+    mode,
+    field,
+    palette,
+    fingerprint: resultFingerprint,
+    session,
+  };
 }
 
 function color(hue: number, alpha = 1, light = 62): string {
@@ -313,10 +731,10 @@ function setupCanvas(canvas: HTMLCanvasElement): { ctx: CanvasRenderingContext2D
   return { ctx, width, height };
 }
 
-function background(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
+function drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   const gradient = ctx.createRadialGradient(width * 0.45, height * 0.38, 8, width * 0.5, height * 0.5, width * 0.8);
-  gradient.addColorStop(0, color(draft.palette[0] ?? 200, 0.24, 22));
-  gradient.addColorStop(0.55, color(draft.palette[1] ?? 250, 0.08, 12));
+  gradient.addColorStop(0, color(draft.palette[0] ?? 200, 0.26, 22));
+  gradient.addColorStop(0.55, color(draft.palette[1] ?? 250, 0.09, 12));
   gradient.addColorStop(1, '#080a0f');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
@@ -325,10 +743,10 @@ function background(ctx: CanvasRenderingContext2D, width: number, height: number
 function drawRibbon(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   for (let layer = 0; layer < 7; layer += 1) {
     ctx.beginPath();
-    draft.field.forEach((value, i) => {
-      const x = (i / (draft.field.length - 1)) * width;
-      const y = height * 0.5 + value * height * (0.18 + layer * 0.018) + Math.sin(i * 0.22 + layer) * 16;
-      if (i === 0) ctx.moveTo(x, y);
+    draft.field.forEach((value, index) => {
+      const x = (index / (draft.field.length - 1)) * width;
+      const y = height * 0.5 + value * height * (0.18 + layer * 0.018) + Math.sin(index * 0.22 + layer) * 16;
+      if (index === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
     ctx.strokeStyle = color(draft.palette[layer % 3] ?? 200, 0.18 + layer * 0.07, 58 + layer * 2);
@@ -340,15 +758,15 @@ function drawRibbon(ctx: CanvasRenderingContext2D, width: number, height: number
 function drawBloom(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   const cx = width / 2;
   const cy = height / 2;
-  const max = Math.min(width, height) * 0.34;
+  const maximum = Math.min(width, height) * 0.34;
   for (let ring = 0; ring < 5; ring += 1) {
     ctx.beginPath();
-    draft.field.forEach((value, i) => {
-      const angle = (i / draft.field.length) * Math.PI * 2;
-      const radius = max * (0.34 + ring * 0.11 + Math.abs(value) * 0.32);
+    draft.field.forEach((value, index) => {
+      const angle = (index / draft.field.length) * Math.PI * 2;
+      const radius = maximum * (0.34 + ring * 0.11 + Math.abs(value) * 0.32);
       const x = cx + Math.cos(angle) * radius;
       const y = cy + Math.sin(angle) * radius;
-      if (i === 0) ctx.moveTo(x, y);
+      if (index === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
     ctx.closePath();
@@ -360,8 +778,8 @@ function drawBloom(ctx: CanvasRenderingContext2D, width: number, height: number,
 
 function drawShards(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   const random = mulberry32(hashText(draft.fingerprint));
-  for (let i = 0; i < 32; i += 1) {
-    const value = Math.abs(draft.field[i % draft.field.length] ?? 0);
+  for (let index = 0; index < 32; index += 1) {
+    const value = Math.abs(draft.field[index % draft.field.length] ?? 0);
     const x = random() * width;
     const y = random() * height;
     const size = 18 + value * 68;
@@ -370,8 +788,8 @@ function drawShards(ctx: CanvasRenderingContext2D, width: number, height: number
     ctx.lineTo(x + size * (0.3 + random() * 0.6), y + size * 0.5);
     ctx.lineTo(x - size * (0.3 + random() * 0.5), y + size * 0.4);
     ctx.closePath();
-    ctx.fillStyle = color(draft.palette[i % 3] ?? 210, 0.08 + value * 0.22, 56);
-    ctx.strokeStyle = color(draft.palette[(i + 1) % 3] ?? 260, 0.35 + value * 0.35, 68);
+    ctx.fillStyle = color(draft.palette[index % 3] ?? 210, 0.08 + value * 0.22, 56);
+    ctx.strokeStyle = color(draft.palette[(index + 1) % 3] ?? 260, 0.35 + value * 0.35, 68);
     ctx.fill();
     ctx.stroke();
   }
@@ -380,11 +798,11 @@ function drawShards(ctx: CanvasRenderingContext2D, width: number, height: number
 function drawOrbit(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   const cx = width / 2;
   const cy = height / 2;
-  draft.field.slice(0, 28).forEach((value, i) => {
-    const radius = 24 + i * Math.min(width, height) * 0.012;
+  draft.field.slice(0, 28).forEach((value, index) => {
+    const radius = 24 + index * Math.min(width, height) * 0.012;
     ctx.beginPath();
     ctx.ellipse(cx, cy, radius * (1 + Math.abs(value) * 1.4), radius * 0.48, value * 1.8, 0, Math.PI * 2);
-    ctx.strokeStyle = color(draft.palette[i % 3] ?? 200, 0.12 + Math.abs(value) * 0.34, 64);
+    ctx.strokeStyle = color(draft.palette[index % 3] ?? 200, 0.12 + Math.abs(value) * 0.34, 64);
     ctx.lineWidth = 0.8 + Math.abs(value) * 2.4;
     ctx.stroke();
   });
@@ -393,11 +811,11 @@ function drawOrbit(ctx: CanvasRenderingContext2D, width: number, height: number,
 function drawTerrain(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   for (let row = 0; row < 12; row += 1) {
     ctx.beginPath();
-    draft.field.forEach((value, i) => {
-      const x = (i / (draft.field.length - 1)) * width;
-      const shifted = draft.field[(i + row * 3) % draft.field.length] ?? value;
+    draft.field.forEach((value, index) => {
+      const x = (index / (draft.field.length - 1)) * width;
+      const shifted = draft.field[(index + row * 3) % draft.field.length] ?? value;
       const y = height * 0.18 + row * height * 0.058 + shifted * 22;
-      if (i === 0) ctx.moveTo(x, y);
+      if (index === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
     ctx.strokeStyle = color(draft.palette[row % 3] ?? 190, 0.18 + row * 0.035, 56 + row);
@@ -407,24 +825,24 @@ function drawTerrain(ctx: CanvasRenderingContext2D, width: number, height: numbe
 }
 
 function drawMesh(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
-  const cols = 9;
+  const columns = 9;
   const rows = 7;
   const nodes: Array<{ x: number; y: number; v: number }> = [];
   for (let y = 0; y < rows; y += 1) {
-    for (let x = 0; x < cols; x += 1) {
-      const index = (y * cols + x) % draft.field.length;
-      const v = draft.field[index] ?? 0;
+    for (let x = 0; x < columns; x += 1) {
+      const index = (y * columns + x) % draft.field.length;
+      const value = draft.field[index] ?? 0;
       nodes.push({
-        x: 24 + (x / (cols - 1)) * (width - 48) + v * 18,
-        y: 24 + (y / (rows - 1)) * (height - 48) + v * 22,
-        v,
+        x: 24 + (x / (columns - 1)) * (width - 48) + value * 18,
+        y: 24 + (y / (rows - 1)) * (height - 48) + value * 22,
+        v: value,
       });
     }
   }
   nodes.forEach((node, index) => {
-    const right = index % cols < cols - 1 ? nodes[index + 1] : undefined;
-    const down = index + cols < nodes.length ? nodes[index + cols] : undefined;
-    [right, down].forEach(target => {
+    const right = index % columns < columns - 1 ? nodes[index + 1] : undefined;
+    const down = index + columns < nodes.length ? nodes[index + columns] : undefined;
+    [right, down].forEach((target) => {
       if (!target) return;
       ctx.beginPath();
       ctx.moveTo(node.x, node.y);
@@ -441,7 +859,7 @@ function drawMesh(ctx: CanvasRenderingContext2D, width: number, height: number, 
 
 function drawConstellation(ctx: CanvasRenderingContext2D, width: number, height: number, draft: Draft): void {
   const random = mulberry32(hashText(draft.fingerprint + ':stars'));
-  const points = draft.field.slice(0, 42).map(value => ({
+  const points = draft.field.slice(0, 42).map((value) => ({
     x: width * (0.08 + random() * 0.84),
     y: height * (0.08 + random() * 0.84),
     v: value,
@@ -464,8 +882,8 @@ function drawConstellation(ctx: CanvasRenderingContext2D, width: number, height:
 
 function renderDraft(canvas: HTMLCanvasElement, draft: Draft): void {
   const { ctx, width, height } = setupCanvas(canvas);
-  background(ctx, width, height, draft);
-  const renderers: Record<string, (context: CanvasRenderingContext2D, w: number, h: number, d: Draft) => void> = {
+  drawBackground(ctx, width, height, draft);
+  const renderers: Record<string, (context: CanvasRenderingContext2D, w: number, h: number, item: Draft) => void> = {
     ribbon: drawRibbon,
     bloom: drawBloom,
     shards: drawShards,
@@ -477,47 +895,52 @@ function renderDraft(canvas: HTMLCanvasElement, draft: Draft): void {
   (renderers[draft.mode] ?? drawRibbon)(ctx, width, height, draft);
 }
 
-function packet(draft: Draft): object {
+function proposalPacket(draft: Draft): JsonValue {
   return {
-    version: 'axm.signal-loom.browser/0.3',
-    capture: draft.capture,
+    version: 'axm.signal-loom.browser/0.5',
+    sessionFingerprint: draft.session.fingerprint,
+    recipeFingerprint: draft.session.recipeFingerprint,
+    influence: draft.session.contributions.map((item) => ({
+      organId: item.organId,
+      weight: Number(item.normalizedWeight.toFixed(6)),
+      packetFingerprint: item.packetFingerprint,
+      provenance: item.provenance,
+    })),
     intentBias: draft.intent,
     seed: draft.seed,
     draft: draft.index,
     chaos: Number(draft.chaos.toFixed(4)),
     mode: draft.mode,
-    paletteHsl: draft.palette.map(hue => Number(hue.toFixed(2))),
+    paletteHsl: draft.palette.map((hue) => Number(hue.toFixed(2))),
     fingerprint: draft.fingerprint,
-    field: draft.field.map(value => Number(value.toFixed(6))),
+    field: draft.field.map((value) => Number(value.toFixed(6))),
     boundary: 'proposal-only',
   };
 }
 
-function updateSignalStrip(): void {
-  const local = localSnapshot();
-  signalStrip.innerHTML = [
-    ['pointer x', local.pointerX],
-    ['pointer y', local.pointerY],
-    ['motion', local.pointerSpeed],
-    ['scroll', local.scroll],
-    ['viewport', local.viewportRatio],
-    ['clock phase', local.clockPhase],
-  ].map(([label, value]) => `<span><b>${label}</b><code>${value}</code></span>`).join('');
+function renderSession(): void {
+  if (!activeSession) {
+    sessionPanel.classList.add('hidden');
+    return;
+  }
+  sessionPanel.classList.remove('hidden');
+  sessionMeta.textContent = `session ${activeSession.fingerprint} · recipe ${activeSession.recipeFingerprint} · ${activeSession.contributions.length} organs`;
+  influenceBars.innerHTML = activeSession.contributions.map((contribution) => {
+    const percent = Math.round(contribution.normalizedWeight * 100);
+    return `
+      <div class="influence-row">
+        <div class="influence-label"><b>${contribution.label}</b><span>${percent}%</span></div>
+        <div class="influence-track"><span style="width:${percent}%"></span></div>
+        <code>${contribution.packetFingerprint}</code>
+      </div>
+    `;
+  }).join('');
+  sessionJson.textContent = JSON.stringify(activeSession, null, 2);
 }
 
-function inspectDraft(draft: Draft): void {
-  selected = draft;
-  inspector.classList.remove('hidden');
-  inspectTitle.textContent = `Draft ${String(draft.index + 1).padStart(2, '0')} · ${draft.mode}`;
-  inspectMeta.textContent = `capture ${draft.capture.fingerprint} · seed ${draft.seed} · chaos ${Math.round(draft.chaos * 100)}% · result ${draft.fingerprint}`;
-  recipe.textContent = JSON.stringify(packet(draft), null, 2);
-  inspector.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function render(): void {
-  if (!activeCapture) {
-    grid.innerHTML = '<div class="empty-field">Capture some signals first.</div>';
-    runInfo.textContent = '';
+function renderProposals(): void {
+  if (!activeSession) {
+    grid.innerHTML = '<div class="empty-field">Capture a source recipe first.</div>';
     return;
   }
 
@@ -525,15 +948,15 @@ function render(): void {
   const seed = Number.parseInt(seedInput.value, 10) || 1;
   const chaos = Number.parseInt(chaosInput.value, 10) / 100;
   const count = Number.parseInt(countInput.value, 10);
-  const drafts = Array.from({ length: count }, (_, index) => makeDraft(activeCapture!, intent, seed, index, chaos));
+  const drafts = Array.from({ length: count }, (_, index) => makeDraft(activeSession!, intent, seed, index, chaos));
 
   grid.innerHTML = '';
-  drafts.forEach(draft => {
+  drafts.forEach((draft) => {
     const card = document.createElement('button');
     card.className = 'draft-card';
     card.type = 'button';
     card.innerHTML = `
-      <canvas aria-label="Visual draft ${draft.index + 1}"></canvas>
+      <canvas aria-label="Visual proposal ${draft.index + 1}"></canvas>
       <span class="draft-meta">
         <span><b>#${String(draft.index + 1).padStart(2, '0')}</b> ${draft.mode}</span>
         <code>${draft.fingerprint}</code>
@@ -542,30 +965,74 @@ function render(): void {
     grid.appendChild(card);
     const canvas = card.querySelector<HTMLCanvasElement>('canvas')!;
     requestAnimationFrame(() => renderDraft(canvas, draft));
-    card.addEventListener('click', () => inspectDraft(draft));
+    card.addEventListener('click', () => {
+      selectedDraft = draft;
+      inspector.classList.remove('hidden');
+      inspectTitle.textContent = `Proposal ${String(draft.index + 1).padStart(2, '0')} · ${draft.mode}`;
+      inspectMeta.textContent = `session ${draft.session.fingerprint} · seed ${draft.seed} · chaos ${Math.round(draft.chaos * 100)}% · result ${draft.fingerprint}`;
+      draftJson.textContent = JSON.stringify(proposalPacket(draft), null, 2);
+      inspector.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   });
 
-  runInfo.textContent = `${count} drafts · capture ${activeCapture.fingerprint} · seed ${seed}`;
+  runInfo.textContent = `${count} proposals · frozen session ${activeSession.fingerprint} · seed ${seed}`;
 }
 
 function doCapture(): void {
-  const capture = captureSources();
-  if (!capture) return;
-  activeCapture = capture;
-  captureInfo.innerHTML = `Frozen capture <code>${capture.fingerprint}</code> · ${new Date(capture.capturedAt).toLocaleTimeString()}`;
-  render();
+  const session = captureSession();
+  if (!session) return;
+  activeSession = session;
+  renderSession();
+  renderProposals();
+}
+
+async function copyText(text: string, button: HTMLButtonElement): Promise<void> {
+  await navigator.clipboard.writeText(text);
+  const previous = button.textContent;
+  button.textContent = 'Copied';
+  window.setTimeout(() => {
+    button.textContent = previous;
+  }, 900);
+}
+
+function loadSessionFromStorage(): void {
+  const raw = localStorage.getItem('axm-signal-machine-session-v0.5');
+  if (!raw) {
+    captureError.textContent = 'No explicitly saved local session exists.';
+    captureError.classList.remove('hidden');
+    return;
+  }
+  try {
+    const parsed = JSON.parse(raw) as CaptureSession;
+    activeSession = parsed;
+    captureError.classList.add('hidden');
+    renderSession();
+    renderProposals();
+  } catch {
+    captureError.textContent = 'Saved local session is invalid.';
+    captureError.classList.remove('hidden');
+  }
 }
 
 function loadQueryInputs(): void {
   const params = new URLSearchParams(window.location.search);
+  const packet = params.get('packet');
   const source = params.get('source');
-  const external = params.get('packet');
   const intent = params.get('intent');
   const seed = params.get('seed');
   const chaos = params.get('chaos');
 
-  if (source) sourceMaterial.value = source;
-  if (external) packetInput.value = external;
+  if (source) {
+    const state = organStates.get('source-material')!;
+    state.enabled = true;
+    state.raw = source;
+  }
+  if (packet) {
+    const state = organStates.get('working-chat')!;
+    state.enabled = true;
+    state.raw = packet;
+    state.provenance = 'URL working-chat bridge';
+  }
   if (intent) intentInput.value = intent;
   if (seed && /^-?\d+$/.test(seed)) seedInput.value = seed;
   if (chaos && /^\d+$/.test(chaos)) {
@@ -575,7 +1042,19 @@ function loadQueryInputs(): void {
   }
 }
 
-window.addEventListener('pointermove', event => {
+function updateLiveSignals(): void {
+  const local = localSnapshot();
+  liveSignals.innerHTML = [
+    ['pointer x', local.pointerX],
+    ['pointer y', local.pointerY],
+    ['motion', local.pointerSpeed],
+    ['scroll', local.scroll],
+    ['viewport', local.viewportRatio],
+    ['clock', local.clockPhase],
+  ].map(([label, value]) => `<span><b>${label}</b><code>${value}</code></span>`).join('');
+}
+
+window.addEventListener('pointermove', (event) => {
   const now = performance.now();
   const nextX = event.clientX / Math.max(1, window.innerWidth);
   const nextY = event.clientY / Math.max(1, window.innerHeight);
@@ -594,27 +1073,35 @@ chaosInput.addEventListener('input', () => {
 });
 
 document.querySelector('#capture')?.addEventListener('click', doCapture);
-document.querySelector('#weave')?.addEventListener('click', render);
+document.querySelector('#weave')?.addEventListener('click', renderProposals);
 document.querySelector('#reroll')?.addEventListener('click', () => {
   seedInput.value = String(Math.floor(Math.random() * 900000000) + 100000000);
-  render();
+  renderProposals();
 });
 document.querySelector('#closeInspector')?.addEventListener('click', () => inspector.classList.add('hidden'));
-document.querySelector('#copyRecipe')?.addEventListener('click', async () => {
-  if (!selected) return;
-  await navigator.clipboard.writeText(JSON.stringify(packet(selected), null, 2));
-  const button = document.querySelector<HTMLButtonElement>('#copyRecipe');
-  if (!button) return;
+
+document.querySelector<HTMLButtonElement>('#copySession')?.addEventListener('click', (event) => {
+  if (!activeSession) return;
+  void copyText(JSON.stringify(activeSession, null, 2), event.currentTarget as HTMLButtonElement);
+});
+document.querySelector<HTMLButtonElement>('#saveSession')?.addEventListener('click', (event) => {
+  if (!activeSession) return;
+  localStorage.setItem('axm-signal-machine-session-v0.5', JSON.stringify(activeSession));
+  const button = event.currentTarget as HTMLButtonElement;
   const previous = button.textContent;
-  button.textContent = 'Copied';
+  button.textContent = 'Saved explicitly';
   window.setTimeout(() => {
     button.textContent = previous;
-  }, 900);
+  }, 1000);
+});
+document.querySelector('#loadSession')?.addEventListener('click', loadSessionFromStorage);
+document.querySelector<HTMLButtonElement>('#copyDraft')?.addEventListener('click', (event) => {
+  if (!selectedDraft) return;
+  void copyText(JSON.stringify(proposalPacket(selectedDraft), null, 2), event.currentTarget as HTMLButtonElement);
 });
 
-window.setInterval(updateSignalStrip, 220);
-window.addEventListener('resize', updateSignalStrip);
-
 loadQueryInputs();
-updateSignalStrip();
-doCapture();
+renderOrganCards();
+updateLiveSignals();
+window.setInterval(updateLiveSignals, 250);
+grid.innerHTML = '<div class="empty-field">Capture a source recipe first.</div>';
