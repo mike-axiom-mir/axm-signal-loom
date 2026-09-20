@@ -71,6 +71,27 @@ Intent is deliberately weaker than the captured field.
 - **Bounded chaos:** public APIs constrain signal fields and mutation.
 - **No hidden collection:** a runtime should expose what it captures.
 
+
+## Internet Eye influence adapter
+
+A passive Internet Eye adapter may consume **already-obtained** Shodan-compatible search/export observations and compress them into ambient influence.
+
+Current coarse features include:
+
+- port mix
+- transport mix
+- country mix
+- product mix
+- organization diversity
+- banner diversity
+- TLS share
+- unique-port ratio
+- unique-product ratio
+
+The adapter is intentionally target-blind: it does not preserve raw IP addresses, hostnames, organization names, or banner text in the resulting SourcePacket.
+
+It performs no network requests, host lookups, active scans, vulnerability checks, or exploit logic. Retrieval remains the responsibility of an authorized caller or connector. The artistic system receives only the reduced influence packet.
+
 ## Current boundaries
 
 The browser playground captures visible browser-local signals and accepts source material / external JSON packets. It does not autonomously browse the internet or open private connections.
