@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from signal_loom import SignalLoom, SignalMagnet, SourcePacket, weave
+from signal_loom import ShodanInfluenceAdapter, SignalLoom, SignalMagnet, SourcePacket, weave
 from signal_loom.render import svg_preview
 
 
@@ -87,6 +87,76 @@ class SignalLoomTests(unittest.TestCase):
         self.assertNotEqual(neutral.fingerprint, biased.fingerprint)
         self.assertEqual(neutral.signals[0], capture.field)
         self.assertEqual(biased.signals[0], capture.field)
+
+
+    def test_internet_eye_aggregates_without_targets(self):
+        adapter = ShodanInfluenceAdapter()
+        influence = adapter.from_matches(
+            [
+                {
+                    "ip_str": "203.0.113.10",
+                    "hostnames": ["example.invalid"],
+                    "port": 443,
+                    "transport": "tcp",
+                    "location": {"country_code": "NL"},
+                    "product": "nginx",
+                    "org": "Example ISP",
+                    "data": "HTTP/1.1 200 OK\\nServer: nginx",
+                    "ssl": {"versions": ["TLSv1.3"]},
+                },
+                {
+                    "ip_str": "198.51.100.20",
+                    "hostnames": ["other.invalid"],
+                    "port": 22,
+                    "transport": "tcp",
+                    "location": {"country_code": "DE"},
+                    "product": "OpenSSH",
+                    "org": "Other ISP",
+                    "data": "SSH-2.0-OpenSSH_9.x",
+                },
+            ]
+        )
+        packet = influence.to_source_packet()
+        encoded = json.dumps(packet.as_dict(), sort_keys=True)
+        self.assertEqual(packet.source, "internet-eye")
+        self.assertIn('"443": 1', encoded)
+        self.assertIn('"22": 1', encoded)
+        self.assertNotIn("203.0.113.10", encoded)
+        self.assertNotIn("198.51.100.20", encoded)
+        self.assertNotIn("example.invalid", encoded)
+        self.assertNotIn("SSH-2.0", encoded)
+
+    def test_internet_eye_can_influence_magnet(self):
+        adapter = ShodanInfluenceAdapter()
+        influence = adapter.from_search_response(
+            {
+                "matches": [
+                    {
+                        "port": 80,
+                        "transport": "tcp",
+                        "location": {"country_code": "US"},
+                        "product": "Apache",
+                        "org": "Org A",
+                        "data": "banner-a",
+                    },
+                    {
+                        "port": 443,
+                        "transport": "tcp",
+                        "location": {"country_code": "NL"},
+                        "product": "nginx",
+                        "org": "Org B",
+                        "data": "banner-b",
+                        "ssl": {"enabled": True},
+                    },
+                ]
+            }
+        )
+        magnet = SignalMagnet(width=32)
+        capture = magnet.capture(influence.to_source_packet())
+        loom = SignalLoom(width=32)
+        packet = loom.draft_capture(capture, seed=123, draft=0, chaos=0.8)
+        self.assertEqual(packet.source_capture, capture)
+        self.assertTrue(all(-1.0 <= value <= 1.0 for value in packet.field.values))
 
 
 if __name__ == "__main__":
