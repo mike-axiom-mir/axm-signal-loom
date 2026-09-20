@@ -1,5 +1,6 @@
 from .core import SignalLoom, weave, weave_capture
 from .internet_eye import InternetEyeInfluence, ShodanInfluenceAdapter
+from .live import LiveSourceSample, LiveWeaveState
 from .machine import (
     CaptureRecipe,
     CaptureSession,
@@ -28,6 +29,8 @@ __all__ = [
     "SourceInput",
     "CaptureRecipe",
     "CaptureSession",
+    "LiveSourceSample",
+    "LiveWeaveState",
     "SignalMagnet",
     "SignalMachine",
     "InternetEyeInfluence",
@@ -36,4 +39,4 @@ __all__ = [
     "weave",
     "weave_capture",
 ]
-__version__ = "0.5.0"
+__version__ = "0.6.0"
