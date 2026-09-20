@@ -318,9 +318,23 @@ function initLiveWeave(shell: HTMLElement): void {
   const particleRandom = mulberry32(liveSeed ^ 0x51f15e);
 
   function setPresentation(mode: 'frozen' | 'live'): void {
+    const previousPresentation = currentPresentation;
+
+    if (mode === 'live' && previousPresentation !== 'live') {
+      frozenElements.forEach((element) => {
+        element.dataset.liveWeaveWasHidden = String(element.classList.contains('hidden'));
+        element.classList.add('hidden');
+      });
+    } else if (mode === 'frozen' && previousPresentation === 'live') {
+      frozenElements.forEach((element) => {
+        const wasHidden = element.dataset.liveWeaveWasHidden === 'true';
+        element.classList.toggle('hidden', wasHidden);
+        delete element.dataset.liveWeaveWasHidden;
+      });
+    }
+
     currentPresentation = mode;
     livePanel.classList.toggle('hidden', mode !== 'live');
-    frozenElements.forEach((element) => element.classList.toggle('hidden', mode !== 'frozen'));
     modeBar.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((button) => {
       const active = button.dataset.mode === mode;
       button.classList.toggle('active', active);
@@ -721,6 +735,7 @@ function initLiveWeave(shell: HTMLElement): void {
     frozenCaptureButton.click();
     if (!frozenSessionPanel.classList.contains('hidden')) {
       notice.textContent = 'Live source state frozen into a normal replayable CaptureSession.';
+      frozenSessionPanel.dataset.liveWeaveWasHidden = 'false';
       setPresentation('frozen');
       frozenSessionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
