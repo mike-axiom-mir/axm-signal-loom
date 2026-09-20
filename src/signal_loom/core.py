@@ -6,7 +6,7 @@ import math
 import random
 from dataclasses import replace
 
-from .model import CreativityPacket, Signal
+from .model import CreativityPacket, Signal, SourceCapture
 
 PACKET_VERSION = "axm.signal-loom.packet/0.1"
 
@@ -168,6 +168,77 @@ def weave(
     )
 
 
+def weave_capture(
+    capture: SourceCapture,
+    *,
+    seed: int,
+    draft: int = 0,
+    intent: str = "",
+    chaos: float = 0.5,
+) -> CreativityPacket:
+    """Weave from a frozen source capture. Intent is only an optional bias."""
+    width = len(capture.field.values)
+    if not 0.0 <= chaos <= 1.0:
+        raise ValueError("chaos must be between 0 and 1")
+    if draft < 0:
+        raise ValueError("draft must be zero or greater")
+    if width < 8:
+        raise ValueError("capture width must be at least 8")
+
+    draft_seed = _seed_int(seed, f"capture:{capture.fingerprint}:draft:{draft}")
+    if intent.strip():
+        bias = token_signal(intent, width=width)
+    else:
+        bias = Signal(name="intent:none", values=(0.0,) * width, tags=("intent", "empty"))
+
+    noise = noise_signal(draft_seed, name=f"noise:{draft}", width=width)
+    rhythm = oscillator_signal(
+        name=f"rhythm:{draft}",
+        width=width,
+        cycles=1.3 + (chaos * 7.7),
+        phase=(draft % 11) * 0.37,
+    )
+    base = mix_signals(
+        (capture.field, bias, noise, rhythm),
+        (1.0, 0.18, 0.12 + chaos * 0.55, 0.18 + chaos * 0.45),
+    )
+    crossed = cross_map(noise, base, amount=0.10 + chaos * 0.45)
+    field = mutate_signal(crossed, seed=draft_seed, amount=chaos * 0.28)
+    field = replace(field, name=f"field:{draft}", tags=field.tags + ("proposal",))
+
+    operations = (
+        "source-capture",
+        "optional-intent-bias",
+        "seeded-noise",
+        "oscillator",
+        "weighted-mix",
+        "cross-map",
+        "bounded-mutation",
+    )
+    pre_fingerprint = {
+        "version": "axm.signal-loom.packet/0.3",
+        "capture": capture.as_dict(),
+        "seed": seed,
+        "draft": draft,
+        "intent": intent,
+        "chaos": round(chaos, 8),
+        "field": field.as_dict(),
+        "operations": list(operations),
+    }
+    return CreativityPacket(
+        version="axm.signal-loom.packet/0.3",
+        seed=seed,
+        draft=draft,
+        request=intent,
+        chaos=chaos,
+        width=width,
+        signals=(capture.field, bias, noise, rhythm),
+        field=field,
+        operations=operations,
+        fingerprint=_fingerprint(pre_fingerprint),
+    )
+
+
 class SignalLoom:
     """Small deterministic facade for project integrations."""
 
@@ -188,5 +259,46 @@ class SignalLoom:
             raise ValueError("count must be at least 1")
         return tuple(
             self.draft(request, seed=seed, draft=index, chaos=chaos)
+            for index in range(count)
+        )
+
+    def draft_capture(
+        self,
+        capture: SourceCapture,
+        *,
+        seed: int,
+        draft: int = 0,
+        intent: str = "",
+        chaos: float = 0.5,
+    ) -> CreativityPacket:
+        if len(capture.field.values) != self.width:
+            raise ValueError("capture width must match loom width")
+        return weave_capture(
+            capture,
+            seed=seed,
+            draft=draft,
+            intent=intent,
+            chaos=chaos,
+        )
+
+    def batch_capture(
+        self,
+        capture: SourceCapture,
+        *,
+        seed: int,
+        count: int,
+        intent: str = "",
+        chaos: float = 0.5,
+    ) -> tuple[CreativityPacket, ...]:
+        if count < 1:
+            raise ValueError("count must be at least 1")
+        return tuple(
+            self.draft_capture(
+                capture,
+                seed=seed,
+                draft=index,
+                intent=intent,
+                chaos=chaos,
+            )
             for index in range(count)
         )
