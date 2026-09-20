@@ -262,6 +262,7 @@ app.innerHTML = `
 
       <div class="actions">
         <button id="capture" class="primary">Capture + weave</button>
+        <button id="sampleSignals" class="secondary">Load sample signals</button>
         <button id="weave" class="secondary">Weave frozen session</button>
         <button id="reroll" class="secondary">New seed</button>
         <span id="runInfo" class="run-info">No session yet</span>
@@ -494,6 +495,27 @@ function reduceInternetEye(raw: JsonValue): JsonValue {
   };
 }
 
+function organHasSignal(organ: OrganDefinition, state: OrganState): boolean {
+  return organ.inputMode === 'local' || state.raw.trim().length > 0;
+}
+
+function organReadiness(organ: OrganDefinition, state: OrganState): string {
+  if (!state.enabled || state.weight <= 0) return 'off';
+  if (!organHasSignal(organ, state)) return 'waiting for signal';
+  if (organ.provenanceRequired && !state.provenance.trim()) return 'needs provenance';
+  return organ.inputMode === 'local' ? 'live' : 'ready';
+}
+
+function updateOrganReadiness(id: string): void {
+  const organ = ORGANS.find((item) => item.id === id);
+  const state = organStates.get(id);
+  const node = document.querySelector<HTMLElement>(`[data-readiness="${id}"]`);
+  if (!organ || !state || !node) return;
+  const readiness = organReadiness(organ, state);
+  node.textContent = readiness;
+  node.dataset.state = readiness.replaceAll(' ', '-');
+}
+
 function renderOrganCards(): void {
   organGrid.innerHTML = ORGANS.map((organ) => {
     const state = organStates.get(organ.id)!;
@@ -530,6 +552,7 @@ function renderOrganCards(): void {
         ${input}
         ${provenance}
         ${organ.id === 'internet-eye' ? '<div class="eye-boundary">Native reducer: raw targets never enter the frozen session.</div>' : ''}
+        <div class="organ-readiness" data-readiness="${organ.id}"></div>
       </article>
     `;
   }).join('');
@@ -540,6 +563,7 @@ function renderOrganCards(): void {
       const state = organStates.get(id)!;
       state.enabled = input.checked;
       document.querySelector<HTMLElement>(`[data-organ-card="${id}"]`)?.classList.toggle('enabled', input.checked);
+      updateOrganReadiness(id);
     });
   });
 
@@ -550,20 +574,27 @@ function renderOrganCards(): void {
       state.weight = Number(input.value) / 100;
       const value = document.querySelector<HTMLElement>(`[data-weight-value="${id}"]`);
       if (value) value.textContent = state.weight.toFixed(2);
+      updateOrganReadiness(id);
     });
   });
 
   organGrid.querySelectorAll<HTMLTextAreaElement>('[data-raw]').forEach((input) => {
     input.addEventListener('input', () => {
-      organStates.get(input.dataset.raw!)!.raw = input.value;
+      const id = input.dataset.raw!;
+      organStates.get(id)!.raw = input.value;
+      updateOrganReadiness(id);
     });
   });
 
   organGrid.querySelectorAll<HTMLInputElement>('[data-provenance]').forEach((input) => {
     input.addEventListener('input', () => {
-      organStates.get(input.dataset.provenance!)!.provenance = input.value;
+      const id = input.dataset.provenance!;
+      organStates.get(id)!.provenance = input.value;
+      updateOrganReadiness(id);
     });
   });
+
+  ORGANS.forEach((organ) => updateOrganReadiness(organ.id));
 }
 
 function captureSession(): CaptureSession | null {
@@ -573,18 +604,19 @@ function captureSession(): CaptureSession | null {
   try {
     const local = localSnapshot();
     const enabled = ORGANS.filter((organ) => organStates.get(organ.id)!.enabled && organStates.get(organ.id)!.weight > 0);
-    if (enabled.length === 0) {
-      throw new Error('Enable at least one source organ with a positive weight.');
+    const usable = enabled.filter((organ) => organHasSignal(organ, organStates.get(organ.id)!));
+    if (usable.length === 0) {
+      throw new Error('No enabled source organ currently has a usable signal.');
     }
 
-    const totalWeight = enabled.reduce((sum, organ) => sum + organStates.get(organ.id)!.weight, 0);
+    const totalWeight = usable.reduce((sum, organ) => sum + organStates.get(organ.id)!.weight, 0);
     const packets: CaptureSession['packets'] = [];
     const contributions: Contribution[] = [];
 
-    enabled.forEach((organ) => {
+    usable.forEach((organ) => {
       const state = organStates.get(organ.id)!;
       if (organ.provenanceRequired && !state.provenance.trim()) {
-        throw new Error(`${organ.label} requires provenance before capture.`);
+        throw new Error(`${organ.label} requires provenance for the data you entered.`);
       }
 
       let payload: JsonValue;
@@ -593,9 +625,6 @@ function captureSession(): CaptureSession | null {
       } else if (organ.inputMode === 'text') {
         payload = state.raw;
       } else {
-        if (!state.raw.trim()) {
-          throw new Error(`${organ.label} is enabled but has no input.`);
-        }
         const parsed = parseJson(state.raw, organ.label);
         payload = organ.inputMode === 'internet-eye' ? reduceInternetEye(parsed) : parsed;
       }
@@ -978,6 +1007,32 @@ function renderProposals(): void {
   runInfo.textContent = `${count} proposals · frozen session ${activeSession.fingerprint} · seed ${seed}`;
 }
 
+function loadSampleSignals(): void {
+  const samples: Record<string, { raw: string; provenance?: string }> = {
+    'source-material': { raw: 'metal rain, tiny impossible garden, repair under pressure' },
+    'working-chat': { raw: '{"themes":["glass forest","repair"],"energy":0.8}', provenance: 'built-in demo fixture, not live' },
+    'simulation-state': { raw: '{"storm":0.65,"crowding":0.42,"motion":0.81}' },
+    'internet-eye': { raw: '{"matches":[{"port":443,"transport":"tcp","location":{"country_code":"NL"},"product":"nginx","ssl":{"enabled":true}},{"port":22,"transport":"tcp","location":{"country_code":"DE"},"product":"OpenSSH"}]}', provenance: 'built-in demo fixture, not live Shodan retrieval' },
+    'connector-packet': { raw: '{"temperature":0.42,"pulse":0.77}', provenance: 'built-in demo connector fixture' },
+    'file-packet': { raw: '{"name":"imaginary-notes.txt","density":0.36,"rhythm":0.71}', provenance: 'built-in demo file fixture' },
+    'model-output': { raw: '{"motifs":["repair","fracture","garden"],"confidence":0.68}', provenance: 'built-in demo model fixture' },
+    sensor: { raw: '{"light":0.31,"motion":0.74,"noise":0.46}', provenance: 'built-in demo sensor fixture' },
+    custom: { raw: '{"strangeness":0.93,"coherence":0.51}', provenance: 'built-in demo custom fixture' },
+  };
+
+  ORGANS.forEach((organ) => {
+    const state = organStates.get(organ.id)!;
+    state.enabled = true;
+    const sample = samples[organ.id];
+    if (sample) {
+      state.raw = sample.raw;
+      state.provenance = sample.provenance ?? state.provenance;
+    }
+  });
+  renderOrganCards();
+  runInfo.textContent = 'Sample signals loaded — fixtures only, not live external sources.';
+}
+
 function doCapture(): void {
   const session = captureSession();
   if (!session) return;
@@ -1073,6 +1128,7 @@ chaosInput.addEventListener('input', () => {
 });
 
 document.querySelector('#capture')?.addEventListener('click', doCapture);
+document.querySelector('#sampleSignals')?.addEventListener('click', loadSampleSignals);
 document.querySelector('#weave')?.addEventListener('click', renderProposals);
 document.querySelector('#reroll')?.addEventListener('click', () => {
   seedInput.value = String(Math.floor(Math.random() * 900000000) + 100000000);

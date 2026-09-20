@@ -1,37 +1,37 @@
 [
   {
-    "name": "Capture weighted native source organs and weave proposals",
+    "name": "Enable every organ without filling every input",
     "sanity": true,
     "viewport": "desktop",
     "covers": [
-      "native source-organ registry",
+      "non-blocking empty source organs",
+      "waiting source state",
       "weighted capture recipe",
-      "influence receipt",
       "visual proposal generation"
     ],
-    "description": "Verifies the primary Signal Machine workflow exposes native organs, freezes a weighted capture, and renders visual proposals.",
+    "description": "Verifies enabling all source organs does not turn empty optional sources into capture errors.",
     "steps": [
-      "Keep Browser Local and Source Material enabled",
+      "Enable every source organ without filling the optional empty JSON/provenance fields",
       "Press \"Capture + weave\"",
-      "Inspect the Influence receipt and proposal grid"
+      "Inspect the frozen Influence receipt and proposal grid"
     ],
-    "expected": "A frozen session is visible with Browser Local and Source Material influence percentages, and twelve visual proposal cards are rendered."
+    "expected": "Capture succeeds using the source organs that actually have usable signals; empty enabled organs remain marked as waiting and do not appear in the frozen influence receipt."
   },
   {
-    "name": "Add a working-chat organ with provenance",
+    "name": "Load sample signals across the whole machine",
     "viewport": "desktop",
     "covers": [
-      "working-chat packet bridge",
-      "source provenance",
-      "source weighting"
+      "sample signal fixtures",
+      "all source-organ usability",
+      "influence receipt"
     ],
-    "description": "Verifies a working chat can become one weighted source organ instead of replacing the machine.",
+    "description": "Verifies the whole source registry can be explored immediately without requiring external accounts or data.",
     "steps": [
-      "Enable Working Chat",
-      "Enter {\"themes\":[\"glass forest\",\"repair\"],\"energy\":0.8} in its JSON input and \"working-chat QA\" in its provenance input",
-      "Set Working Chat influence weight above zero and press \"Capture + weave\""
+      "Press \"Load sample signals\"",
+      "Press \"Capture + weave\"",
+      "Inspect the Influence receipt"
     ],
-    "expected": "Working Chat appears in the frozen Influence receipt with a visible normalized percentage and packet fingerprint."
+    "expected": "All ten source organs have usable demo fixtures, capture succeeds, and the receipt visibly includes all ten weighted influences while identifying the samples as demo fixtures rather than live sources."
   },
   {
     "name": "Internet Eye reduces observations before exposure",
@@ -50,14 +50,14 @@
     "expected": "Internet Eye is present as target-blind aggregate influence, while the raw IP, hostname, organization name, and banner text are not visible in the frozen session JSON."
   },
   {
-    "name": "Reject missing provenance without replacing the prior session",
+    "name": "Entered external data still requires provenance",
     "viewport": "desktop",
     "covers": [
       "provenance guardrail",
       "failed capture preservation",
       "no silent rewrite"
     ],
-    "description": "Verifies a provenance-required source cannot silently enter a capture.",
+    "description": "Verifies waiting empty sources are harmless but an external packet that is actually supplied must carry provenance.",
     "steps": [
       "Enable Connector Packet",
       "Enter {\"signal\":0.5} in its JSON input but leave provenance empty",
