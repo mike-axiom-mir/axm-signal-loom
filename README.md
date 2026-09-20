@@ -24,6 +24,16 @@ The first implementation is intentionally small and offline:
 
 This is not yet neural-signal capture. Neural/model adapters belong later, behind explicit adapters and provenance boundaries.
 
+## Visual playground
+
+Open the live browser experiment:
+
+https://axm-signal-loom-playground-1uwyt4.v2.appdeploy.ai/
+
+It generates multiple replayable visual drafts from a prompt, seed and chaos value. The browser source is preserved in [playground/](playground/).
+
+The browser v0.2 runtime is deterministic within itself but is not yet bit-identical to the Python v0.1 generator; that boundary is documented rather than hidden.
+
 ## Try it
 
 Python 3.11+ is enough.
