@@ -6,7 +6,7 @@ Signal Loom is a separate AXM creativity machine. Its proper input is not a prom
 
 > **Root boundary:** sources feed the Magnet. The Loom proposes. The consuming project decides.
 
-## v0.3 direction
+## v0.4 direction
 
 - generic `SourcePacket` adapter boundary
 - deterministic `SignalMagnet` capture
@@ -17,6 +17,7 @@ Signal Loom is a separate AXM creativity machine. Its proper input is not a prom
 - replayable creativity packets
 - browser visual playground
 - zero Python runtime dependencies
+- target-blind **Internet Eye** adapter for Shodan-compatible indexed observations
 
 The older `weave("text", ...)` API remains for compatibility and simple experiments. New integrations should prefer `SignalMagnet.capture(...)` + `SignalLoom.draft_capture(...)`.
 
@@ -65,6 +66,27 @@ print(packet.field.values)
 ```
 
 Any connected system can define a source adapter that emits a JSON-serializable `SourcePacket`. The Magnet does not silently fetch or authorize access by itself; the caller controls what sources are available and records provenance.
+
+## Internet Eye influence
+
+Signal Loom can also use indexed internet observations as **ambient artistic influence** without turning into a recon interface.
+
+```python
+from signal_loom import ShodanInfluenceAdapter, SignalMagnet, SignalLoom
+
+adapter = ShodanInfluenceAdapter()
+influence = adapter.from_search_response(shodan_export_or_api_response)
+
+magnet = SignalMagnet(width=64)
+capture = magnet.capture(influence.to_source_packet())
+
+loom = SignalLoom(width=64)
+draft = loom.draft_capture(capture, seed=42, chaos=0.9)
+```
+
+The adapter keeps coarse aggregate influence such as port mix, transport mix, country spread, product mix, TLS share and diversity measures. Raw IPs, hostnames, organization names and banner text are not preserved in the resulting source packet.
+
+It performs **no active scans and no network requests itself**. A caller may feed it already-obtained Shodan-compatible results through an authorized path. Shodan itself is a search engine for internet-connected devices and indexes publicly exposed service metadata. 
 
 ## Why keep it separate?
 
