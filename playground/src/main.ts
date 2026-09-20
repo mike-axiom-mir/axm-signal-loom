@@ -199,15 +199,15 @@ app.innerHTML = `
   <main class="shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">AXM SIGNAL MACHINE / v0.5</p>
+        <p class="eyebrow">AXM SIGNAL MACHINE / v0.6</p>
         <h1>Many eyes.<br>One frozen accident.</h1>
-        <p class="lede">Source organs capture the world you explicitly give them. Weight the influences, freeze a replayable session, then let the Loom turn that mixture into strange visual proposals.</p>
+        <p class="lede">Source organs capture only what you explicitly give them. Freeze a replayable session for memory, or watch the same weighted sources move through an ephemeral Live Weave before deciding what deserves to be captured.</p>
       </div>
       <div class="status-card">
         <span class="pulse-dot"></span>
         <div>
           <strong>10 source organs registered</strong>
-          <small>explicit capture • weighted • replayable</small>
+          <small>explicit sources • frozen replay • live motion</small>
         </div>
       </div>
     </header>
