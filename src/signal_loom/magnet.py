@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import hashlib
 import json
 import random
@@ -36,6 +37,7 @@ class SignalMagnet:
         if not packets:
             raise ValueError("at least one source packet is required")
 
+        packets = deepcopy(packets)
         normalized = [packet.as_dict() for packet in packets]
         randomizers = [random.Random(_seed(packet)) for packet in normalized]
         values: list[float] = []
@@ -75,6 +77,7 @@ class SignalMagnet:
         if not weighted_packets:
             raise ValueError("at least one weighted source packet is required")
 
+        weighted_packets = deepcopy(weighted_packets)
         for _, weight in weighted_packets:
             if weight < 0:
                 raise ValueError("source weights cannot be negative")

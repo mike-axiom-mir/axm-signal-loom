@@ -1,4 +1,5 @@
 import json
+import copy
 import unittest
 
 from signal_loom import (
@@ -15,6 +16,34 @@ from signal_loom.render import svg_preview
 
 
 class SignalLoomTests(unittest.TestCase):
+    def test_capture_owns_nested_source_payload(self):
+        for weighted in (False, True):
+            with self.subTest(weighted=weighted):
+                payload = {"nested": [{"value": 1}]}
+                packet = SourcePacket(source="custom", label="snapshot", payload=payload)
+                magnet = SignalMagnet(width=8)
+                capture = magnet.capture_weighted(((packet, 1.0),)) if weighted else magnet.capture(packet)
+                before = copy.deepcopy(capture.as_dict())
+                payload["nested"][0]["value"] = 2
+                self.assertEqual(capture.as_dict(), before)
+                exported = capture.as_dict()
+                exported["packets"][0]["payload"]["nested"].append("changed")
+                self.assertEqual(capture.as_dict(), before)
+
+    def test_frozen_session_survives_input_and_export_mutation_and_replays(self):
+        payload = {"nested": [1]}
+        recipe = CaptureRecipe(inputs=(SourceInput("custom", payload, provenance="local test fixture"),))
+        machine = SignalMachine(width=8)
+        session = machine.capture(recipe, captured_at="2026-09-25T00:00:00Z")
+        before = copy.deepcopy(session.as_dict())
+        payload["nested"].append(2)
+        self.assertEqual(session.as_dict(), before)
+        exported = session.as_dict()
+        exported["recipe"]["inputs"][0]["payload"]["nested"].append(3)
+        exported["capture"]["packets"][0]["payload"]["nested"].append(4)
+        self.assertEqual(session.as_dict(), before)
+        self.assertEqual(machine.replay_session(json.loads(json.dumps(before))).as_dict(), before)
+
     def test_same_recipe_replays_exactly(self):
         first = weave(
             "storm ceramic insect jazz", seed=4837291, draft=4, chaos=0.72
