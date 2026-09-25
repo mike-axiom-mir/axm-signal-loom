@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Iterable
@@ -160,7 +161,7 @@ class SourceInput:
     def as_dict(self) -> dict[str, Any]:
         return {
             "organ_id": self.organ_id,
-            "payload": self.payload,
+            "payload": deepcopy(self.payload),
             "weight": round(self.weight, 8),
             "label": self.label,
             "provenance": self.provenance,
@@ -276,6 +277,7 @@ class SignalMachine:
         *,
         captured_at: str | None = None,
     ) -> CaptureSession:
+        recipe = deepcopy(recipe)
         if not recipe.inputs:
             raise ValueError("capture recipe must contain at least one source input")
 

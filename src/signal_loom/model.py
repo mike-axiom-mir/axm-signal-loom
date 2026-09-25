@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,7 +30,7 @@ class SourcePacket:
         return {
             "source": self.source,
             "label": self.label,
-            "payload": self.payload,
+            "payload": deepcopy(self.payload),
             "provenance": self.provenance,
         }
 
