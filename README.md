@@ -6,6 +6,20 @@ Signal Loom is a separate AXM creativity machine. Its input is not a prompt. A n
 
 > **Root boundary:** sources feed the Magnet. The Loom proposes. The consuming project decides.
 
+## v0.6 — Frozen Weave + Live Weave
+
+Signal Machine now exposes two first-class presentations over the same explicit source organs:
+
+- **Frozen Weave — memory:** fingerprinted, inspectable, replayable CaptureSessions and deterministic Loom proposals.
+- **Live Weave — motion:** a separate ephemeral rolling source field with Flow Field, Particle Current, and Liquid Mesh renderers.
+- Live Weave keeps only the latest valid signal per organ and never silently overwrites Frozen Weave state.
+- **Freeze this moment** is the explicit bridge from live motion into the normal replayable CaptureRecipe/CaptureSession path.
+- Live controls include smoothing, trail/memory, intensity, chaos, speed, color drift, play/pause, fullscreen, and a compact influence panel.
+- Internet Eye remains target-blind aggregate-only in both modes; no live Shodan connection is implied.
+- The browser and Python live runtimes follow the same architecture but are not claimed bit-identical.
+
+See [docs/LIVE_WEAVE.md](docs/LIVE_WEAVE.md) for the live runtime and truth boundaries.
+
 ## v0.5 — native Signal Machine
 
 v0.5 promotes the source system from helper functions into one machine contract:

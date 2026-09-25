@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "axm-signal-loom"
-version = "0.5.0"
-description = "Source-organ creativity machine with weighted replayable signal capture."
+version = "0.6.0"
+description = "Source-organ creativity machine with frozen replay and ephemeral Live Weave."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MPL-2.0" }
@@ -13,7 +13,8 @@ authors = [{ name = "Mike - Axiom/Mir" }]
 dependencies = []
 
 [project.scripts]
-axm-signal-loom = "signal_loom.cli:main"\naxm-signal-machine = "signal_loom.machine_cli:main"
+axm-signal-loom = "signal_loom.cli:main"
+axm-signal-machine = "signal_loom.machine_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

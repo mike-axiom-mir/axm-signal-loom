@@ -27,6 +27,9 @@ jobs:
       - name: Install visual playground dependencies
         working-directory: playground
         run: npm install
+      - name: Type-check visual playground
+        working-directory: playground
+        run: npm run check
       - name: Build visual playground
         working-directory: playground
         run: npm run build
