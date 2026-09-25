@@ -15,7 +15,7 @@ Signal Machine now exposes two first-class presentations over the same explicit 
 - Live Weave keeps only the latest valid signal per organ and never silently overwrites Frozen Weave state.
 - **Freeze this moment** is the explicit bridge from live motion into the normal replayable CaptureRecipe/CaptureSession path.
 - Live controls include smoothing, trail/memory, intensity, chaos, speed, color drift, play/pause, fullscreen, and a compact influence panel.
-- Internet Eye remains target-blind aggregate-only in both modes; no live Shodan connection is implied.
+- Internet Eye capture packets are target-blind aggregates; frozen session recipes retain caller-supplied sources for replay (see the retention boundary below). No live Shodan connection is implied.
 - The browser and Python live runtimes follow the same architecture but are not claimed bit-identical.
 
 See [docs/LIVE_WEAVE.md](docs/LIVE_WEAVE.md) for the live runtime and truth boundaries.
@@ -103,7 +103,9 @@ print(session.capture.contributions)
 print(drafts[0].fingerprint)
 ```
 
-The Internet Eye payload is reduced inside the machine before it reaches the frozen session. Raw IP addresses, hostnames, organization names and banner text are not preserved in its output packet.
+The Internet Eye payload is reduced before it reaches the capture packet. Raw IP addresses, hostnames, organization names and banner text are not preserved in that aggregate packet.
+
+**Retention boundary:** `CaptureSession.recipe` and saved session JSON retain the caller-supplied Internet Eye input for replay. A complete frozen session is therefore not target-blind. Keep it within the source data's permitted scope; an aggregate-only replay format and migration remain unimplemented.
 
 ## Recipe-driven CLI
 

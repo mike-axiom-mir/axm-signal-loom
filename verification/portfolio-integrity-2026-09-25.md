@@ -21,3 +21,7 @@ Command: `PYTHONPATH=src:. python -m unittest discover -s tests -v`
 18 tests passed. Direct mutation of objects owned by a returned dataclass is outside this bounded ownership repair; this does not claim deep immutability or browser-runtime parity.
 
 Regression tests exercise invalid input and valid-state continuity. The full repository command above passed on the repaired working tree. No production-readiness, deployment, or CANON claim is made.
+
+## Separate observed retention limit
+
+A synthetic Internet Eye input containing `192.0.2.1` is removed from the aggregate capture packet but retained in `CaptureSession.recipe` and session JSON. README now states this boundary accurately. This ownership repair does not implement aggregate-only replay storage or erase retained source evidence.
